@@ -1,64 +1,139 @@
-import { Database, Layers3, MapPinned } from "lucide-react";
+"use client";
 
+import { useState, useMemo } from "react";
+import Navbar from "@/components/Navbar";
+import MapView from "@/components/MapView";
+import MapFilters from "@/components/MapView/MapFilters";
+import { DUMMY_REPORTS, CATEGORY_LABELS, STATUS_BADGE_VARIANTS, STATUS_LABELS } from "@/lib/dummy-reports";
+import type { Report, ReportCategory, ReportStatus } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-
-const foundations = [
-  {
-    title: "App Router dan TypeScript",
-    description: "Fondasi Next.js, Tailwind CSS, dan shadcn/ui sudah aktif.",
-    icon: Layers3,
-  },
-  {
-    title: "Supabase dan React Query",
-    description: "Helper client/server dan provider data sudah tersedia.",
-    icon: Database,
-  },
-  {
-    title: "Leaflet dan OpenStreetMap",
-    description: "Dependency, stylesheet, dan konfigurasi tile dasar sudah siap.",
-    icon: MapPinned,
-  },
-] as const;
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ThumbsUp, MapPin, Calendar, X, AlertCircle } from "lucide-react";
 
 export default function Home() {
+  const [reports] = useState<Report[]>(DUMMY_REPORTS);
+  const [selectedCategory, setSelectedCategory] = useState<ReportCategory | "all">("all");
+  const [selectedStatus, setSelectedStatus] = useState<ReportStatus | "all">("all");
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+
+  // Filter reports based on active selection
+  const filteredReports = useMemo(() => {
+    return reports.filter((report) => {
+      const matchCategory = selectedCategory === "all" || report.category === selectedCategory;
+      const matchStatus = selectedStatus === "all" || report.status === selectedStatus;
+      return matchCategory && matchStatus;
+    });
+  }, [reports, selectedCategory, selectedStatus]);
+
+  const handleResetFilters = () => {
+    setSelectedCategory("all");
+    setSelectedStatus("all");
+  };
+
   return (
-    <main className="flex min-h-screen items-center justify-center bg-muted/40 px-4 py-16">
-      <Card className="w-full max-w-2xl">
-        <CardHeader className="gap-4">
-          <Badge variant="secondary" className="w-fit">
-            Fondasi project aktif
-          </Badge>
-          <div className="space-y-2">
-            <CardTitle className="text-3xl tracking-tight sm:text-4xl">
-              SigapKota
-            </CardTitle>
-            <CardDescription className="text-base leading-7">
-              Project berhasil diinisialisasi. Konfigurasi utama untuk fondasi
-              MVP sudah tersedia dan siap dikembangkan pada tahap berikutnya.
-            </CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <ul className="grid gap-3 sm:grid-cols-3">
-            {foundations.map(({ title, description, icon: Icon }) => (
-              <li key={title} className="rounded-lg border bg-background p-4">
-                <Icon className="mb-3 size-5 text-primary" aria-hidden="true" />
-                <p className="font-medium">{title}</p>
-                <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                  {description}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
-    </main>
+    <div className="flex h-screen flex-col bg-background">
+      <Navbar />
+
+      <main className="relative flex flex-1 flex-col overflow-hidden p-2 sm:p-4 gap-2 sm:gap-3">
+        {/* Filter controls */}
+        <MapFilters
+          selectedCategory={selectedCategory}
+          selectedStatus={selectedStatus}
+          onCategoryChange={setSelectedCategory}
+          onStatusChange={setSelectedStatus}
+          onReset={handleResetFilters}
+          totalResults={filteredReports.length}
+          totalAll={reports.length}
+        />
+
+        {/* Map Container */}
+        <div className="relative flex-1 w-full overflow-hidden rounded-lg">
+          {filteredReports.length === 0 ? (
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm p-4 text-center">
+              <AlertCircle className="h-10 w-10 text-muted-foreground mb-2" />
+              <h3 className="text-base font-semibold">Tidak Ada Laporan Ditemukan</h3>
+              <p className="text-xs text-muted-foreground max-w-sm mt-1 mb-4">
+                Tidak ada laporan yang sesuai dengan kombinasi filter kategori dan status saat ini.
+              </p>
+              <Button size="sm" variant="outline" onClick={handleResetFilters}>
+                Reset Filter
+              </Button>
+            </div>
+          ) : null}
+
+          <MapView
+            reports={filteredReports}
+            selectedReportId={selectedReport?.id}
+            onSelectReport={(report) => setSelectedReport(report)}
+            center={selectedReport ? [selectedReport.latitude, selectedReport.longitude] : [-6.3458, 106.7394]}
+            zoom={selectedReport ? 15 : 13}
+          />
+
+          {/* Selected Report Quick Preview Card Overlay */}
+          {selectedReport && (
+            <div className="absolute bottom-4 left-4 right-4 sm:left-auto sm:right-4 z-20 sm:w-96">
+              <Card className="shadow-lg border-2 bg-card/95 backdrop-blur">
+                <CardHeader className="p-3 pb-2 flex flex-row items-start justify-between space-y-0">
+                  <div className="space-y-1 pr-4">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                        {CATEGORY_LABELS[selectedReport.category]}
+                      </Badge>
+                      <Badge
+                        variant={STATUS_BADGE_VARIANTS[selectedReport.status]}
+                        className="text-[10px] px-1.5 py-0"
+                      >
+                        {STATUS_LABELS[selectedReport.status]}
+                      </Badge>
+                    </div>
+                    <CardTitle className="text-sm font-semibold leading-tight line-clamp-1">
+                      {selectedReport.title}
+                    </CardTitle>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 rounded-full -mr-1 -mt-1"
+                    onClick={() => setSelectedReport(null)}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </CardHeader>
+
+                <CardContent className="p-3 pt-0 space-y-2.5">
+                  {selectedReport.photo_url && (
+                    <div className="aspect-video w-full overflow-hidden rounded-md bg-muted">
+                      <img
+                        src={selectedReport.photo_url}
+                        alt={selectedReport.title}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                  )}
+
+                  {selectedReport.description && (
+                    <p className="text-xs text-muted-foreground line-clamp-2">
+                      {selectedReport.description}
+                    </p>
+                  )}
+
+                  <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t">
+                    <div className="flex items-center gap-1">
+                      <ThumbsUp className="h-3.5 w-3.5 text-primary" />
+                      <span className="font-medium text-foreground">{selectedReport.vote_count}</span> dukungan
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-3.5 w-3.5" />
+                      <span>{new Date(selectedReport.created_at).toLocaleDateString("id-ID")}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </div>
+      </main>
+    </div>
   );
 }

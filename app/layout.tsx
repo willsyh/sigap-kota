@@ -21,7 +21,11 @@ export const metadata: Metadata = {
   description: "Platform pelaporan masalah fasilitas umum berbasis peta.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html
       lang="id"
