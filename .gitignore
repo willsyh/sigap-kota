@@ -40,3 +40,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# planning doc & design reference (do not commit)
+SigapKota_PBI_FR_Per_Role_5_Hari.md
+stitch_sigapkota_civic_reporting_platform/
