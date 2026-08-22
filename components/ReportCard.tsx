@@ -12,7 +12,7 @@ import {
   CATEGORY_COLORS,
   STATUS_LABELS,
   STATUS_BADGE_VARIANTS,
-} from "@/lib/dummy-reports";
+} from "@/lib/constants/reports";
 import type { Report } from "@/lib/types";
 
 interface ReportCardProps {
@@ -26,6 +26,7 @@ export default function ReportCard({ report }: ReportCardProps) {
         {/* Thumbnail */}
         {report.photo_url && (
           <div className="aspect-video w-full overflow-hidden bg-muted">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={report.photo_url}
               alt={report.title}

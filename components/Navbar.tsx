@@ -1,12 +1,43 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { MapPin, FileText, PlusCircle, ShieldCheck } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { MapPin, FileText, PlusCircle, ShieldCheck, LogOut } from "lucide-react";
+import type { User } from "@supabase/supabase-js";
+
 import { Button } from "@/components/ui/button";
+import { createClient } from "@/lib/supabase/client";
 
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  async function handleLogout() {
+    await createClient().auth.signOut();
+    setUser(null);
+    router.push("/");
+    router.refresh();
+  }
 
   const navItems = [
     { href: "/", label: "Peta Utama", icon: MapPin },
@@ -52,6 +83,32 @@ export default function Navbar() {
               <span>Buat Laporan</span>
             </Button>
           </Link>
+
+          {user ? (
+            <div className="flex items-center gap-2">
+              <span
+                className="hidden sm:inline max-w-[140px] truncate text-xs text-muted-foreground"
+                title={user.email ?? ""}
+              >
+                {user.email}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 gap-1 text-xs"
+                onClick={handleLogout}
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                <span>Keluar</span>
+              </Button>
+            </div>
+          ) : (
+            <Link href="/auth/login">
+              <Button variant="outline" size="sm" className="h-8 text-xs">
+                Masuk
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
     </header>

@@ -13,3 +13,34 @@ export const REPORT_STATUSES = [
   "diproses",
   "selesai",
 ] as const satisfies readonly ReportStatus[];
+
+export const CATEGORY_LABELS: Record<ReportCategory, string> = {
+  jalan_rusak: "Jalan Rusak",
+  sampah: "Sampah Menumpuk",
+  banjir: "Banjir / Genangan",
+  fasilitas_umum: "Fasilitas Umum",
+  lainnya: "Lainnya",
+};
+
+export const CATEGORY_COLORS: Record<ReportCategory, string> = {
+  jalan_rusak: "#e11d48", // red
+  sampah: "#d97706", // amber
+  banjir: "#2563eb", // blue
+  fasilitas_umum: "#059669", // emerald
+  lainnya: "#7c3aed", // violet
+};
+
+export const STATUS_LABELS: Record<ReportStatus, string> = {
+  dilaporkan: "Dilaporkan",
+  diproses: "Diproses",
+  selesai: "Selesai",
+};
+
+export const STATUS_BADGE_VARIANTS: Record<
+  ReportStatus,
+  "destructive" | "default" | "secondary"
+> = {
+  dilaporkan: "destructive",
+  diproses: "default",
+  selesai: "secondary",
+};

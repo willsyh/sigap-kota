@@ -1,6 +1,6 @@
 "use client";
 
-import { CATEGORY_LABELS, STATUS_LABELS } from "@/lib/dummy-reports";
+import { CATEGORY_LABELS, STATUS_LABELS } from "@/lib/constants/reports";
 import type { ReportCategory, ReportStatus } from "@/lib/types";
 import { REPORT_CATEGORIES, REPORT_STATUSES } from "@/lib/constants/reports";
 import { Button } from "@/components/ui/button";

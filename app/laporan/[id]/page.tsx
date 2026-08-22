@@ -1,7 +1,10 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   ArrowLeft,
   Calendar,
@@ -10,6 +13,8 @@ import {
   CheckCircle2,
   Clock,
   AlertTriangle,
+  Loader2,
+  History,
 } from "lucide-react";
 
 import Navbar from "@/components/Navbar";
@@ -22,14 +27,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
-  DUMMY_REPORTS,
   CATEGORY_LABELS,
   CATEGORY_COLORS,
   STATUS_LABELS,
   STATUS_BADGE_VARIANTS,
-} from "@/lib/dummy-reports";
-import type { ReportStatus } from "@/lib/types";
+} from "@/lib/constants/reports";
+import { createClient } from "@/lib/supabase/client";
+import type { Report, ReportStatus } from "@/lib/types";
+import type { StatusLogRow } from "@/lib/supabase/types";
 
 const STATUS_ICONS: Record<ReportStatus, typeof Clock> = {
   dilaporkan: AlertTriangle,
@@ -45,9 +52,142 @@ const TIMELINE_STEPS: { status: ReportStatus; label: string }[] = [
 
 export default function ReportDetailPage() {
   const params = useParams<{ id: string }>();
-  const report = DUMMY_REPORTS.find((r) => r.id === params.id);
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const reportId = params?.id;
 
-  if (!report) {
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    createClient()
+      .auth.getUser()
+      .then(({ data }) => {
+        setCurrentUserId(data.user?.id ?? null);
+      });
+  }, []);
+
+  // Fetch report
+  const {
+    data: report,
+    isLoading: reportLoading,
+    isError: reportError,
+  } = useQuery<Report | null>({
+    queryKey: ["report", reportId],
+    queryFn: async () => {
+      if (!reportId) return null;
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("reports")
+        .select("*")
+        .eq("id", reportId)
+        .maybeSingle();
+
+      if (error) throw error;
+      return (data as Report) ?? null;
+    },
+    enabled: Boolean(reportId),
+  });
+
+  // Fetch status logs
+  const { data: statusLogs = [] } = useQuery<StatusLogRow[]>({
+    queryKey: ["status_logs", reportId],
+    queryFn: async () => {
+      if (!reportId) return [];
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("status_logs")
+        .select("*")
+        .eq("report_id", reportId)
+        .order("changed_at", { ascending: true });
+
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: Boolean(reportId),
+  });
+
+  // Check if current user already voted
+  const { data: hasVoted = false, refetch: refetchVoted } = useQuery<boolean>({
+    queryKey: ["user_voted", reportId, currentUserId],
+    queryFn: async () => {
+      if (!reportId || !currentUserId) return false;
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("votes")
+        .select("id")
+        .eq("report_id", reportId)
+        .eq("user_id", currentUserId)
+        .maybeSingle();
+
+      if (error) return false;
+      return Boolean(data);
+    },
+    enabled: Boolean(reportId && currentUserId),
+  });
+
+  // Vote mutation
+  const voteMutation = useMutation({
+    mutationFn: async () => {
+      if (!currentUserId) {
+        toast.info("Silakan masuk terlebih dahulu untuk mendukung laporan.");
+        router.push("/auth/login");
+        throw new Error("UNAUTHORIZED");
+      }
+
+      const res = await fetch(`/api/laporan/${reportId}/vote`, {
+        method: "POST",
+      });
+
+      if (res.status === 409) {
+        throw new Error("ALREADY_VOTED");
+      }
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.error ?? "Gagal mengirim dukungan");
+      }
+
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("Terima kasih telah mendukung laporan ini!");
+      queryClient.invalidateQueries({ queryKey: ["report", reportId] });
+      refetchVoted();
+    },
+    onError: (err: Error) => {
+      if (err.message === "ALREADY_VOTED") {
+        toast.info("Kamu sudah mendukung laporan ini");
+        refetchVoted();
+      } else if (err.message !== "UNAUTHORIZED") {
+        toast.error(err.message || "Gagal mendukung laporan");
+      }
+    },
+  });
+
+  if (reportLoading) {
+    return (
+      <div className="flex min-h-screen flex-col bg-background">
+        <Navbar />
+        <main className="container flex-1 px-4 py-6 space-y-6">
+          <Skeleton className="h-6 w-24" />
+          <div className="grid gap-6 lg:grid-cols-5">
+            <div className="lg:col-span-3 space-y-4">
+              <Skeleton className="aspect-video w-full rounded-lg" />
+              <Skeleton className="h-8 w-3/4" />
+              <Skeleton className="h-20 w-full" />
+            </div>
+            <div className="lg:col-span-2 space-y-4">
+              <Skeleton className="h-28 w-full rounded-lg" />
+              <Skeleton className="h-44 w-full rounded-lg" />
+              <Skeleton className="h-48 w-full rounded-lg" />
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (reportError || !report) {
     return (
       <div className="flex min-h-screen flex-col bg-background">
         <Navbar />
@@ -89,6 +229,7 @@ export default function ReportDetailPage() {
             {/* Photo */}
             {report.photo_url && (
               <div className="aspect-video w-full overflow-hidden rounded-lg bg-muted">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={report.photo_url}
                   alt={report.title}
@@ -124,7 +265,7 @@ export default function ReportDetailPage() {
 
             {/* Description */}
             {report.description && (
-              <p className="text-sm text-muted-foreground leading-relaxed">
+              <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
                 {report.description}
               </p>
             )}
@@ -146,7 +287,7 @@ export default function ReportDetailPage() {
             </div>
           </div>
 
-          {/* Right column: vote, timeline, mini map */}
+          {/* Right column: vote, timeline, logs, mini map */}
           <div className="lg:col-span-2 space-y-4">
             {/* Vote card */}
             <Card>
@@ -156,12 +297,22 @@ export default function ReportDetailPage() {
               <CardContent className="p-4 pt-0 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <ThumbsUp className="h-5 w-5 text-primary" />
-                  <span className="text-2xl font-bold">{report.vote_count}</span>
+                  <span className="text-2xl font-bold">{report.vote_count ?? 0}</span>
                   <span className="text-xs text-muted-foreground">suara</span>
                 </div>
-                <Button size="sm" className="gap-1">
-                  <ThumbsUp className="h-3.5 w-3.5" />
-                  Dukung
+                <Button
+                  size="sm"
+                  className="gap-1"
+                  onClick={() => voteMutation.mutate()}
+                  disabled={hasVoted || voteMutation.isPending}
+                  variant={hasVoted ? "secondary" : "default"}
+                >
+                  {voteMutation.isPending ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <ThumbsUp className="h-3.5 w-3.5" />
+                  )}
+                  {hasVoted ? "Didukung" : "Dukung"}
                 </Button>
               </CardContent>
             </Card>
@@ -171,7 +322,7 @@ export default function ReportDetailPage() {
               <CardHeader className="p-4 pb-2">
                 <CardTitle className="text-sm">Status Penanganan</CardTitle>
               </CardHeader>
-              <CardContent className="p-4 pt-0">
+              <CardContent className="p-4 pt-0 space-y-4">
                 <ol className="space-y-3">
                   {TIMELINE_STEPS.map((step, idx) => {
                     const isCompleted = idx <= currentStepIdx;
@@ -204,6 +355,40 @@ export default function ReportDetailPage() {
                     );
                   })}
                 </ol>
+
+                {/* Activity logs jika ada */}
+                {statusLogs.length > 0 && (
+                  <div className="border-t pt-3 space-y-2">
+                    <div className="flex items-center gap-1 text-xs font-semibold text-muted-foreground">
+                      <History className="h-3.5 w-3.5" />
+                      <span>Riwayat Pembaruan Status</span>
+                    </div>
+                    <ul className="space-y-1.5 text-xs text-muted-foreground">
+                      {statusLogs.map((log) => (
+                        <li key={log.id} className="flex items-center justify-between">
+                          <span>
+                            {log.old_status
+                              ? `${STATUS_LABELS[log.old_status as ReportStatus] ?? log.old_status} → `
+                              : ""}
+                            <strong className="text-foreground">
+                              {STATUS_LABELS[log.new_status as ReportStatus] ?? log.new_status}
+                            </strong>
+                          </span>
+                          <span className="text-[11px]">
+                            {log.changed_at
+                              ? new Date(log.changed_at).toLocaleDateString("id-ID", {
+                                  day: "numeric",
+                                  month: "short",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })
+                              : ""}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

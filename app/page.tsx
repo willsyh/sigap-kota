@@ -1,18 +1,34 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Navbar from "@/components/Navbar";
 import MapView from "@/components/MapView";
 import MapFilters from "@/components/MapView/MapFilters";
-import { DUMMY_REPORTS, CATEGORY_LABELS, STATUS_BADGE_VARIANTS, STATUS_LABELS } from "@/lib/dummy-reports";
+import {
+  CATEGORY_LABELS,
+  STATUS_BADGE_VARIANTS,
+  STATUS_LABELS,
+} from "@/lib/constants/reports";
 import type { Report, ReportCategory, ReportStatus } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ThumbsUp, MapPin, Calendar, X, AlertCircle } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ThumbsUp, Calendar, X, AlertCircle } from "lucide-react";
+
+async function fetchReports(): Promise<Report[]> {
+  const res = await fetch("/api/laporan");
+  if (!res.ok) throw new Error("Gagal memuat laporan");
+  return res.json();
+}
 
 export default function Home() {
-  const [reports] = useState<Report[]>(DUMMY_REPORTS);
+  const { data: reports = [], isLoading, isError, refetch } = useQuery<Report[]>({
+    queryKey: ["reports"],
+    queryFn: fetchReports,
+  });
+
   const [selectedCategory, setSelectedCategory] = useState<ReportCategory | "all">("all");
   const [selectedStatus, setSelectedStatus] = useState<ReportStatus | "all">("all");
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
@@ -49,7 +65,26 @@ export default function Home() {
 
         {/* Map Container */}
         <div className="relative flex-1 w-full overflow-hidden rounded-lg">
-          {filteredReports.length === 0 ? (
+          {isLoading ? (
+            <div className="flex h-full w-full items-center justify-center rounded-lg border bg-muted/20">
+              <div className="space-y-3 text-center">
+                <Skeleton className="mx-auto h-12 w-12 rounded-full" />
+                <Skeleton className="h-4 w-48" />
+                <p className="text-xs text-muted-foreground">Memuat peta dan laporan...</p>
+              </div>
+            </div>
+          ) : isError ? (
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm p-4 text-center">
+              <AlertCircle className="h-10 w-10 text-destructive mb-2" />
+              <h3 className="text-base font-semibold">Gagal Memuat Laporan</h3>
+              <p className="text-xs text-muted-foreground max-w-sm mt-1 mb-4">
+                Terjadi kesalahan saat mengambil data laporan dari server.
+              </p>
+              <Button size="sm" variant="outline" onClick={() => refetch()}>
+                Coba Lagi
+              </Button>
+            </div>
+          ) : filteredReports.length === 0 ? (
             <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm p-4 text-center">
               <AlertCircle className="h-10 w-10 text-muted-foreground mb-2" />
               <h3 className="text-base font-semibold">Tidak Ada Laporan Ditemukan</h3>
@@ -62,13 +97,15 @@ export default function Home() {
             </div>
           ) : null}
 
-          <MapView
-            reports={filteredReports}
-            selectedReportId={selectedReport?.id}
-            onSelectReport={(report) => setSelectedReport(report)}
-            center={selectedReport ? [selectedReport.latitude, selectedReport.longitude] : [-6.3458, 106.7394]}
-            zoom={selectedReport ? 15 : 13}
-          />
+          {!isLoading && !isError && (
+            <MapView
+              reports={filteredReports}
+              selectedReportId={selectedReport?.id}
+              onSelectReport={(report) => setSelectedReport(report)}
+              center={selectedReport ? [selectedReport.latitude, selectedReport.longitude] : [-6.3458, 106.7394]}
+              zoom={selectedReport ? 15 : 13}
+            />
+          )}
 
           {/* Selected Report Quick Preview Card Overlay */}
           {selectedReport && (
@@ -104,6 +141,7 @@ export default function Home() {
                 <CardContent className="p-3 pt-0 space-y-2.5">
                   {selectedReport.photo_url && (
                     <div className="aspect-video w-full overflow-hidden rounded-md bg-muted">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={selectedReport.photo_url}
                         alt={selectedReport.title}

@@ -10,7 +10,7 @@ import {
   CATEGORY_LABELS,
   STATUS_BADGE_VARIANTS,
   STATUS_LABELS,
-} from "@/lib/dummy-reports";
+} from "@/lib/constants/reports";
 import type { Report } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -110,6 +110,7 @@ export default function MapComponent({
                   {report.photo_url && (
                     <div className="aspect-video w-full overflow-hidden rounded-md bg-muted">
                       {/* Using standard img for Leaflet popup compatibility */}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={report.photo_url}
                         alt={report.title}

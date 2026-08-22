@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search, AlertCircle } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Search, AlertCircle, Loader2 } from "lucide-react";
 
 import Navbar from "@/components/Navbar";
 import ReportCard from "@/components/ReportCard";
@@ -16,20 +17,31 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  DUMMY_REPORTS,
   CATEGORY_LABELS,
   STATUS_LABELS,
-} from "@/lib/dummy-reports";
-import { REPORT_CATEGORIES, REPORT_STATUSES } from "@/lib/constants/reports";
-import type { ReportCategory, ReportStatus } from "@/lib/types";
+  REPORT_CATEGORIES,
+  REPORT_STATUSES,
+} from "@/lib/constants/reports";
+import type { Report, ReportCategory, ReportStatus } from "@/lib/types";
+
+async function fetchReports(): Promise<Report[]> {
+  const res = await fetch("/api/laporan");
+  if (!res.ok) throw new Error("Gagal memuat laporan");
+  return res.json();
+}
 
 export default function LaporanPage() {
+  const { data: reports = [], isLoading, isError, refetch } = useQuery<Report[]>({
+    queryKey: ["reports"],
+    queryFn: fetchReports,
+  });
+
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<ReportCategory | "all">("all");
   const [status, setStatus] = useState<ReportStatus | "all">("all");
 
   const filtered = useMemo(() => {
-    return DUMMY_REPORTS.filter((r) => {
+    return reports.filter((r) => {
       const matchSearch =
         search.trim() === "" ||
         r.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -38,7 +50,7 @@ export default function LaporanPage() {
       const matchStat = status === "all" || r.status === status;
       return matchSearch && matchCat && matchStat;
     });
-  }, [search, category, status]);
+  }, [reports, search, category, status]);
 
   const resetFilters = () => {
     setSearch("");
@@ -108,18 +120,58 @@ export default function LaporanPage() {
           )}
 
           <span className="ml-auto text-xs text-muted-foreground">
-            {filtered.length} laporan
+            {isLoading ? (
+              <span className="inline-flex items-center gap-1">
+                <Loader2 className="h-3 w-3 animate-spin" /> Memuat...
+              </span>
+            ) : (
+              `${filtered.length} laporan`
+            )}
           </span>
         </div>
 
+        {/* Loading state */}
+        {isLoading && (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="space-y-3 rounded-lg border p-4">
+                <Skeleton className="aspect-video w-full rounded-md" />
+                <div className="flex gap-2">
+                  <Skeleton className="h-5 w-20" />
+                  <Skeleton className="h-5 w-16" />
+                </div>
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-full" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Error state */}
+        {!isLoading && isError && (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <AlertCircle className="h-10 w-10 text-destructive mb-3" />
+            <h3 className="text-base font-semibold">Gagal memuat laporan</h3>
+            <p className="text-xs text-muted-foreground mt-1 max-w-sm">
+              Terjadi kesalahan saat menghubungi server. Silakan coba lagi.
+            </p>
+            <Button variant="outline" size="sm" className="mt-4" onClick={() => refetch()}>
+              Coba Lagi
+            </Button>
+          </div>
+        )}
+
         {/* Report grid */}
-        {filtered.length > 0 ? (
+        {!isLoading && !isError && filtered.length > 0 && (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((report) => (
               <ReportCard key={report.id} report={report} />
             ))}
           </div>
-        ) : (
+        )}
+
+        {/* Empty state */}
+        {!isLoading && !isError && filtered.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <AlertCircle className="h-10 w-10 text-muted-foreground mb-3" />
             <h3 className="text-base font-semibold">Tidak ada laporan ditemukan</h3>

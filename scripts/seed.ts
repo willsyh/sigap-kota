@@ -1,39 +1,53 @@
-import type { Report, ReportCategory, ReportStatus } from "@/lib/types";
+/**
+ * Script Seeding Data Demo SigapKota
+ *
+ * Jalankan dengan:
+ *   npx tsx scripts/seed.ts
+ *
+ * Pastikan environment variable sudah terisi di .env.local:
+ *   NEXT_PUBLIC_SUPABASE_URL
+ *   SUPABASE_SERVICE_ROLE_KEY
+ */
 
-export const CATEGORY_LABELS: Record<ReportCategory, string> = {
-  jalan_rusak: "Jalan Rusak",
-  sampah: "Sampah Menumpuk",
-  banjir: "Banjir / Genangan",
-  fasilitas_umum: "Fasilitas Umum",
-  lainnya: "Lainnya",
-};
+import { createClient } from "@supabase/supabase-js";
+import { readFileSync, existsSync } from "fs";
+import { resolve } from "path";
 
-export const CATEGORY_COLORS: Record<ReportCategory, string> = {
-  jalan_rusak: "#e11d48", // red
-  sampah: "#d97706", // amber
-  banjir: "#2563eb", // blue
-  fasilitas_umum: "#059669", // emerald
-  lainnya: "#7c3aed", // violet
-};
+// Muat variabel lingkungan dari .env.local jika ada
+function loadEnv() {
+  const envPath = resolve(process.cwd(), ".env.local");
+  if (!existsSync(envPath)) return;
 
-export const STATUS_LABELS: Record<ReportStatus, string> = {
-  dilaporkan: "Dilaporkan",
-  diproses: "Diproses",
-  selesai: "Selesai",
-};
+  const content = readFileSync(envPath, "utf-8");
+  for (const line of content.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eqIdx = trimmed.indexOf("=");
+    if (eqIdx === -1) continue;
+    const key = trimmed.slice(0, eqIdx).trim();
+    const val = trimmed.slice(eqIdx + 1).trim().replace(/^["']|["']$/g, "");
+    if (!process.env[key]) {
+      process.env[key] = val;
+    }
+  }
+}
 
-export const STATUS_BADGE_VARIANTS: Record<
-  ReportStatus,
-  "destructive" | "default" | "secondary"
-> = {
-  dilaporkan: "destructive",
-  diproses: "default",
-  selesai: "secondary",
-};
+loadEnv();
 
-export const DUMMY_REPORTS: Report[] = [
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl || !serviceRoleKey) {
+  console.error("Error: NEXT_PUBLIC_SUPABASE_URL dan SUPABASE_SERVICE_ROLE_KEY wajib diisi di .env.local");
+  process.exit(1);
+}
+
+const supabase = createClient(supabaseUrl, serviceRoleKey, {
+  auth: { persistSession: false },
+});
+
+const DEMO_REPORTS = [
   {
-    id: "rep-001",
     title: "Jalan Berlubang Parah di Jl. Raya Puspitek",
     description:
       "Lubang diameter 50cm dengan kedalaman 10cm sangat membahayakan pengendara motor saat malam hari.",
@@ -44,10 +58,8 @@ export const DUMMY_REPORTS: Report[] = [
     longitude: 106.7412,
     status: "dilaporkan",
     vote_count: 14,
-    created_at: "2026-08-20T08:30:00Z",
   },
   {
-    id: "rep-002",
     title: "Sampah Menumpuk Dekat Bundaran Pamulang",
     description:
       "Tumpukan sampah liar menimbulkan bau menyengat dan mengganggu pejalan kaki.",
@@ -58,10 +70,8 @@ export const DUMMY_REPORTS: Report[] = [
     longitude: 106.7365,
     status: "diproses",
     vote_count: 28,
-    created_at: "2026-08-19T14:15:00Z",
   },
   {
-    id: "rep-003",
     title: "Genangan Banjir di Depan Kampus Unpam Utama",
     description:
       "Drainase tersumbat menyebabkan air menggenang setinggi 30cm setiap hujan deras.",
@@ -72,26 +82,22 @@ export const DUMMY_REPORTS: Report[] = [
     longitude: 106.7394,
     status: "dilaporkan",
     vote_count: 42,
-    created_at: "2026-08-21T06:00:00Z",
   },
   {
-    id: "rep-004",
     title: "Lampu Penerangan Jalan Mati di Jl. Pajajaran",
     description:
       "Tiga tiang PJU padam sejak 3 hari lalu, area sangat gelap di malam hari.",
     category: "fasilitas_umum",
     photo_url:
       "https://images.unsplash.com/photo-1509114397022-ed747cca3f65?auto=format&fit=crop&w=800&q=80",
+    photo_after_url:
+      "https://images.unsplash.com/photo-1517649763962-0c623266010b?auto=format&fit=crop&w=800&q=80",
     latitude: -6.3398,
     longitude: 106.7451,
     status: "selesai",
-    photo_after_url:
-      "https://images.unsplash.com/photo-1517649763962-0c623266010b?auto=format&fit=crop&w=800&q=80",
     vote_count: 19,
-    created_at: "2026-08-15T19:20:00Z",
   },
   {
-    id: "rep-005",
     title: "Tutup Manhole Saluran Air Rusak",
     description:
       "Tutup beton pecah dan terbuka di trotoar, rawan membuat pejalan kaki terperosok.",
@@ -102,10 +108,8 @@ export const DUMMY_REPORTS: Report[] = [
     longitude: 106.7328,
     status: "diproses",
     vote_count: 9,
-    created_at: "2026-08-21T11:00:00Z",
   },
   {
-    id: "rep-006",
     title: "Pohon Tumbang Menghalangi Sebagian Badan Jalan",
     description:
       "Dahan besar patah setelah angin kencang, menghambat lalu lintas dari arah Ciputat.",
@@ -116,6 +120,23 @@ export const DUMMY_REPORTS: Report[] = [
     longitude: 106.7489,
     status: "selesai",
     vote_count: 31,
-    created_at: "2026-08-17T16:45:00Z",
   },
 ];
+
+async function seed() {
+  console.log("Memulai seeding data demo ke Supabase...");
+
+  const { data, error } = await supabase
+    .from("reports")
+    .insert(DEMO_REPORTS)
+    .select();
+
+  if (error) {
+    console.error("Gagal melakukan seeding:", error.message);
+    process.exit(1);
+  }
+
+  console.log(`Berhasil menambahkan ${data.length} laporan demo!`);
+}
+
+seed();
