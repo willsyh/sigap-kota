@@ -3,6 +3,7 @@
 import { useEffect, useMemo } from "react";
 import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
+import "leaflet.heat";
 
 import { OPENSTREETMAP_ATTRIBUTION, OPENSTREETMAP_TILE_URL } from "@/lib/constants/map";
 import {
@@ -21,6 +22,60 @@ interface MapComponentProps {
   onSelectReport?: (report: Report) => void;
   center?: [number, number];
   zoom?: number;
+  viewMode?: "marker" | "heatmap";
+  onSwitchToMarker?: () => void;
+}
+
+// B08: Heatmap Layer Component using leaflet.heat with click-to-zoom
+function HeatmapLayer({ reports, onSwitchToMarker }: { reports: Report[]; onSwitchToMarker?: () => void }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!map) return;
+
+    // Convert reports to [lat, lng, intensity]
+    const points: [number, number, number][] = reports.map((r) => [
+      r.latitude,
+      r.longitude,
+      Math.min(1.0, 0.4 + (r.vote_count || 1) * 0.1), // higher votes = higher intensity
+    ]);
+
+    // @ts-expect-error leaflet.heat attaches heatLayer to L
+    const heatLayer = L.heatLayer(points, {
+      radius: 25,
+      blur: 15,
+      maxZoom: 17,
+      max: 1.0,
+      gradient: {
+        0.2: "#3b82f6",
+        0.4: "#06b6d4",
+        0.6: "#10b981",
+        0.8: "#f59e0b",
+        1.0: "#ef4444",
+      },
+    });
+
+    heatLayer.addTo(map);
+
+    const handleMapClick = (e: L.LeafletMouseEvent) => {
+      // Zoom in on clicked heatmap area & auto switch to pin view if zoomed close
+      const currentZoom = map.getZoom();
+      const newZoom = Math.min(currentZoom + 2, 18);
+      map.flyTo(e.latlng, newZoom, { animate: true });
+      if (newZoom >= 16 && onSwitchToMarker) {
+        onSwitchToMarker();
+      }
+    };
+
+    map.on("click", handleMapClick);
+
+    return () => {
+      map.off("click", handleMapClick);
+      map.removeLayer(heatLayer);
+    };
+  }, [map, reports, onSwitchToMarker]);
+
+  return null;
 }
 
 // Center view controller
@@ -72,6 +127,8 @@ export default function MapComponent({
   onSelectReport,
   center = [-6.3458, 106.7394], // Pamulang default
   zoom = 13,
+  viewMode = "marker",
+  onSwitchToMarker,
 }: MapComponentProps) {
   const defaultCenter: [number, number] = useMemo(() => center, [center]);
 
@@ -92,70 +149,73 @@ export default function MapComponent({
 
         <MapViewController center={center} zoom={zoom} />
 
-        {reports.map((report) => {
-          const isSelected = report.id === selectedReportId;
-          const icon = createCustomIcon(report.category, isSelected);
+        {viewMode === "heatmap" ? (
+          <HeatmapLayer reports={reports} onSwitchToMarker={onSwitchToMarker} />
+        ) : (
+          reports.map((report) => {
+            const isSelected = report.id === selectedReportId;
+            const icon = createCustomIcon(report.category, isSelected);
 
-          return (
-            <Marker
-              key={report.id}
-              position={[report.latitude, report.longitude]}
-              icon={icon}
-              eventHandlers={{
-                click: () => onSelectReport?.(report),
-              }}
-            >
-              <Popup className="sigapkota-popup">
-                <div className="w-64 space-y-2 p-1">
-                  {report.photo_url && (
-                    <div className="aspect-video w-full overflow-hidden rounded-md bg-muted">
-                      {/* Using standard img for Leaflet popup compatibility */}
-                      <img
-                        src={report.photo_url}
-                        alt={report.title}
-                        className="h-full w-full object-cover"
-                      />
+            return (
+              <Marker
+                key={report.id}
+                position={[report.latitude, report.longitude]}
+                icon={icon}
+                eventHandlers={{
+                  click: () => onSelectReport?.(report),
+                }}
+              >
+                <Popup className="sigapkota-popup">
+                  <div className="w-64 space-y-2 p-1">
+                    {report.photo_url && (
+                      <div className="aspect-video w-full overflow-hidden rounded-md bg-muted">
+                        <img
+                          src={report.photo_url}
+                          alt={report.title}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                        {CATEGORY_LABELS[report.category]}
+                      </Badge>
+                      <Badge
+                        variant={STATUS_BADGE_VARIANTS[report.status]}
+                        className="text-[10px] px-1.5 py-0"
+                      >
+                        {STATUS_LABELS[report.status]}
+                      </Badge>
                     </div>
-                  )}
 
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                      {CATEGORY_LABELS[report.category]}
-                    </Badge>
-                    <Badge
-                      variant={STATUS_BADGE_VARIANTS[report.status]}
-                      className="text-[10px] px-1.5 py-0"
-                    >
-                      {STATUS_LABELS[report.status]}
-                    </Badge>
+                    <h4 className="text-sm font-semibold leading-tight text-foreground line-clamp-2">
+                      {report.title}
+                    </h4>
+
+                    {report.description && (
+                      <p className="text-xs text-muted-foreground line-clamp-2">
+                        {report.description}
+                      </p>
+                    )}
+
+                    <div className="flex items-center justify-between pt-1 text-xs text-muted-foreground border-t">
+                      <span>{report.vote_count} Dukungan</span>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="h-7 text-xs px-2"
+                        onClick={() => onSelectReport?.(report)}
+                      >
+                        Lihat Detail
+                      </Button>
+                    </div>
                   </div>
-
-                  <h4 className="text-sm font-semibold leading-tight text-foreground line-clamp-2">
-                    {report.title}
-                  </h4>
-
-                  {report.description && (
-                    <p className="text-xs text-muted-foreground line-clamp-2">
-                      {report.description}
-                    </p>
-                  )}
-
-                  <div className="flex items-center justify-between pt-1 text-xs text-muted-foreground border-t">
-                    <span>{report.vote_count} Dukungan</span>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      className="h-7 text-xs px-2"
-                      onClick={() => onSelectReport?.(report)}
-                    >
-                      Lihat Detail
-                    </Button>
-                  </div>
-                </div>
-              </Popup>
-            </Marker>
-          );
-        })}
+                </Popup>
+              </Marker>
+            );
+          })
+        )}
       </MapContainer>
     </div>
   );

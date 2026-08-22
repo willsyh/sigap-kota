@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import { QueryProvider } from "@/components/providers/QueryProvider";
+import { Toaster } from "@/components/ui/sonner";
 
 import "leaflet/dist/leaflet.css";
 import "./globals.css";
@@ -32,7 +33,10 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
-        <QueryProvider>{children}</QueryProvider>
+        <QueryProvider>
+          {children}
+          <Toaster position="top-right" />
+        </QueryProvider>
       </body>
     </html>
   );

@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, Flame, MapPin } from "lucide-react";
 
 interface MapFiltersProps {
   selectedCategory: ReportCategory | "all";
@@ -21,6 +21,8 @@ interface MapFiltersProps {
   onReset: () => void;
   totalResults: number;
   totalAll: number;
+  viewMode?: "marker" | "heatmap";
+  onViewModeChange?: (mode: "marker" | "heatmap") => void;
 }
 
 export default function MapFilters({
@@ -31,12 +33,40 @@ export default function MapFilters({
   onReset,
   totalResults,
   totalAll,
+  viewMode = "marker",
+  onViewModeChange,
 }: MapFiltersProps) {
   const isFiltered = selectedCategory !== "all" || selectedStatus !== "all";
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-card p-3 shadow-sm">
       <div className="flex flex-wrap items-center gap-2">
+        {/* View Mode Toggle (B08) */}
+        {onViewModeChange && (
+          <div className="flex items-center rounded-md border bg-muted p-0.5">
+            <Button
+              type="button"
+              variant={viewMode === "heatmap" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-8 px-2.5 text-xs gap-1"
+              onClick={() => onViewModeChange("heatmap")}
+            >
+              <Flame className="h-3.5 w-3.5 text-amber-500" />
+              Heatmap
+            </Button>
+            <Button
+              type="button"
+              variant={viewMode === "marker" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-8 px-2.5 text-xs gap-1"
+              onClick={() => onViewModeChange("marker")}
+            >
+              <MapPin className="h-3.5 w-3.5" />
+              Pin
+            </Button>
+          </div>
+        )}
+
         {/* Category Filter */}
         <div className="w-[160px] sm:w-[180px]">
           <Select
