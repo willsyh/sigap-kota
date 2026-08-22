@@ -10,6 +10,8 @@ interface MapViewProps {
   onSelectReport?: (report: Report) => void;
   center?: [number, number];
   zoom?: number;
+  viewMode?: "marker" | "heatmap";
+  onSwitchToMarker?: () => void;
 }
 
 const MapComponent = dynamic(() => import("./MapComponent"), {

@@ -16,6 +16,7 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState<ReportCategory | "all">("all");
   const [selectedStatus, setSelectedStatus] = useState<ReportStatus | "all">("all");
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const [viewMode, setViewMode] = useState<"marker" | "heatmap">("heatmap");
 
   // Filter reports based on active selection
   const filteredReports = useMemo(() => {
@@ -45,6 +46,8 @@ export default function Home() {
           onReset={handleResetFilters}
           totalResults={filteredReports.length}
           totalAll={reports.length}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
         />
 
         {/* Map Container */}
@@ -68,6 +71,8 @@ export default function Home() {
             onSelectReport={(report) => setSelectedReport(report)}
             center={selectedReport ? [selectedReport.latitude, selectedReport.longitude] : [-6.3458, 106.7394]}
             zoom={selectedReport ? 15 : 13}
+            viewMode={viewMode}
+            onSwitchToMarker={() => setViewMode("marker")}
           />
 
           {/* Selected Report Quick Preview Card Overlay */}

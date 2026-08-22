@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import {
   BarChart3,
   FileText,
@@ -10,6 +11,8 @@ import {
   CheckCircle2,
   Clock,
   AlertTriangle,
+  TrendingUp,
+  LineChart,
 } from "lucide-react";
 
 import Navbar from "@/components/Navbar";
@@ -187,6 +190,173 @@ function OverviewTab({ reports }: { reports: Report[] }) {
   );
 }
 
+// ============ B07: Admin Analytics ============
+function AnalyticsTab({ reports }: { reports: Report[] }) {
+  // Reports timeline (by date)
+  const timelineData = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const r of reports) {
+      const dateStr = new Date(r.created_at).toLocaleDateString("id-ID", {
+        month: "short",
+        day: "numeric",
+      });
+      counts[dateStr] = (counts[dateStr] || 0) + 1;
+    }
+    const max = Math.max(...Object.values(counts), 1);
+    return { counts, max };
+  }, [reports]);
+
+  // Resolution metrics
+  const resolutionMetrics = useMemo(() => {
+    const completed = reports.filter((r) => r.status === "selesai");
+    const avgVotes = (reports.reduce((acc, r) => acc + r.vote_count, 0) / (reports.length || 1)).toFixed(1);
+    const resolutionRate = ((completed.length / (reports.length || 1)) * 100).toFixed(0);
+    return { completedCount: completed.length, avgVotes, resolutionRate };
+  }, [reports]);
+
+  const catStats = useMemo(() => {
+    const counts: Record<ReportCategory, number> = {
+      jalan_rusak: 0,
+      sampah: 0,
+      banjir: 0,
+      fasilitas_umum: 0,
+      lainnya: 0,
+    };
+    for (const r of reports) counts[r.category]++;
+    return counts;
+  }, [reports]);
+
+  const statusStats = useMemo(() => {
+    const counts: Record<ReportStatus, number> = {
+      dilaporkan: 0,
+      diproses: 0,
+      selesai: 0,
+    };
+    for (const r of reports) counts[r.status]++;
+    return counts;
+  }, [reports]);
+
+  return (
+    <div className="space-y-6">
+      {/* Metric Highlights */}
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Card>
+          <CardHeader className="p-4 pb-2">
+            <CardTitle className="text-xs text-muted-foreground font-medium">Tingkat Penyelesaian</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-0">
+            <div className="flex items-center justify-between">
+              <span className="text-2xl font-bold">{resolutionMetrics.resolutionRate}%</span>
+              <Badge variant="outline" className="text-xs">{resolutionMetrics.completedCount} Selesai</Badge>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="p-4 pb-2">
+            <CardTitle className="text-xs text-muted-foreground font-medium">Rata-rata Dukungan</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-0">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-primary" />
+              <span className="text-2xl font-bold">{resolutionMetrics.avgVotes}</span>
+              <span className="text-xs text-muted-foreground">vote/laporan</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="p-4 pb-2">
+            <CardTitle className="text-xs text-muted-foreground font-medium">Total Volume Laporan</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-0">
+            <span className="text-2xl font-bold">{reports.length}</span>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Reports Over Time Visual */}
+      <Card>
+        <CardHeader className="p-4 pb-2">
+          <CardTitle className="text-sm">Tren Laporan Masuk</CardTitle>
+        </CardHeader>
+        <CardContent className="p-4 pt-4">
+          <div className="flex items-end gap-3 h-40 pt-4 border-b pb-2">
+            {Object.entries(timelineData.counts).map(([date, count]) => {
+              const heightPct = (count / timelineData.max) * 100;
+              return (
+                <div key={date} className="flex-1 flex flex-col items-center gap-1 group relative">
+                  <div className="text-[10px] text-muted-foreground font-medium">{count}</div>
+                  <div className="w-full bg-primary/20 hover:bg-primary/40 rounded-t transition-all" style={{ height: `${heightPct}%` }}>
+                    <div className="w-full h-full bg-primary rounded-t" style={{ height: `${heightPct}%` }} />
+                  </div>
+                  <span className="text-[10px] text-muted-foreground truncate w-full text-center">{date}</span>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Category Breakdown */}
+        <Card>
+          <CardHeader className="p-4 pb-2">
+            <CardTitle className="text-sm">Distribusi Per Kategori</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-2 space-y-3">
+            {REPORT_CATEGORIES.map((cat) => {
+              const count = catStats[cat];
+              const pct = reports.length > 0 ? (count / reports.length) * 100 : 0;
+              return (
+                <div key={cat} className="space-y-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="font-medium">{CATEGORY_LABELS[cat]}</span>
+                    <span className="text-muted-foreground">{count} ({pct.toFixed(0)}%)</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{ width: `${pct}%`, backgroundColor: CATEGORY_COLORS[cat] }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+
+        {/* Status Breakdown */}
+        <Card>
+          <CardHeader className="p-4 pb-2">
+            <CardTitle className="text-sm">Distribusi Status</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-2 space-y-3">
+            {REPORT_STATUSES.map((stat) => {
+              const count = statusStats[stat];
+              const pct = reports.length > 0 ? (count / reports.length) * 100 : 0;
+              return (
+                <div key={stat} className="space-y-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="font-medium">{STATUS_LABELS[stat]}</span>
+                    <span className="text-muted-foreground">{count} ({pct.toFixed(0)}%)</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all bg-primary"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
 // ============ B06: All reports table ============
 function AllReportsTab({ reports: initial }: { reports: Report[] }) {
   const [reports, setReports] = useState<Report[]>(initial);
@@ -211,6 +381,7 @@ function AllReportsTab({ reports: initial }: { reports: Report[] }) {
     setReports((prev) =>
       prev.map((r) => (r.id === reportId ? { ...r, status: newStatus } : r))
     );
+    toast.success(`Status laporan berhasil diubah ke ${STATUS_LABELS[newStatus]}`);
   };
 
   return (
@@ -337,6 +508,10 @@ export default function AdminPage() {
               <BarChart3 className="h-4 w-4 mr-1" />
               Overview
             </TabsTrigger>
+            <TabsTrigger value="analytics">
+              <LineChart className="h-4 w-4 mr-1" />
+              Analytics
+            </TabsTrigger>
             <TabsTrigger value="reports">
               <FileText className="h-4 w-4 mr-1" />
               Semua Laporan
@@ -345,6 +520,10 @@ export default function AdminPage() {
 
           <TabsContent value="overview">
             <OverviewTab reports={DUMMY_REPORTS} />
+          </TabsContent>
+
+          <TabsContent value="analytics">
+            <AnalyticsTab reports={DUMMY_REPORTS} />
           </TabsContent>
 
           <TabsContent value="reports">
