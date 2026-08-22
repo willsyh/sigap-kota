@@ -39,10 +39,14 @@ export default function Navbar() {
     router.refresh();
   }
 
+  const isAdmin = user?.user_metadata?.role === "admin";
+
   const navItems = [
     { href: "/", label: "Peta Utama", icon: MapPin },
     { href: "/laporan", label: "Daftar Laporan", icon: FileText },
-    { href: "/admin", label: "Panel Admin", icon: ShieldCheck },
+    ...(isAdmin
+      ? [{ href: "/admin", label: "Panel Admin", icon: ShieldCheck }]
+      : []),
   ];
 
   return (
@@ -78,9 +82,9 @@ export default function Navbar() {
 
         <div className="flex items-center gap-2">
           <Link href="/laporan/baru">
-            <Button size="sm" className="h-8 gap-1 text-xs">
+            <Button size="sm" className="h-8 gap-1 text-xs" aria-label="Buat Laporan">
               <PlusCircle className="h-3.5 w-3.5" />
-              <span>Buat Laporan</span>
+              <span className="hidden sm:inline">Buat Laporan</span>
             </Button>
           </Link>
 

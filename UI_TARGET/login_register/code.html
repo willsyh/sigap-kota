@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SigapKota - Login</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@600;700&amp;family=Inter:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-high": "#dee8ff",
+                        "outline": "#6f797a",
+                        "secondary": "#8e4e14",
+                        "error-container": "#ffdad6",
+                        "surface-variant": "#d8e3fa",
+                        "error": "#ba1a1a",
+                        "tertiary": "#01544f",
+                        "primary": "#00535b",
+                        "surface": "#f9f9ff",
+                        "on-secondary": "#ffffff",
+                        "outline-variant": "#bec8ca",
+                        "on-tertiary-container": "#a9ece4",
+                        "tertiary-container": "#286d67",
+                        "on-primary-fixed": "#001f23",
+                        "inverse-surface": "#263142",
+                        "on-background": "#111c2c",
+                        "surface-bright": "#f9f9ff",
+                        "on-primary-container": "#9becf7",
+                        "surface-container-low": "#f0f3ff",
+                        "inverse-on-surface": "#ebf1ff",
+                        "inverse-primary": "#82d3de",
+                        "background": "#f9f9ff",
+                        "on-primary": "#ffffff",
+                        "surface-container-highest": "#d8e3fa",
+                        "on-tertiary-fixed": "#00201e",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary-fixed-dim": "#90d3cb",
+                        "on-tertiary-fixed-variant": "#00504b",
+                        "primary-fixed": "#9ff0fb",
+                        "on-surface-variant": "#3e494a",
+                        "on-error": "#ffffff",
+                        "on-tertiary": "#ffffff",
+                        "secondary-fixed-dim": "#ffb780",
+                        "on-surface": "#111c2c",
+                        "surface-dim": "#cfdaf1",
+                        "on-secondary-fixed-variant": "#6f3800",
+                        "on-error-container": "#93000a",
+                        "surface-container": "#e7eeff",
+                        "surface-tint": "#006972",
+                        "secondary-fixed": "#ffdcc4",
+                        "on-primary-fixed-variant": "#004f56",
+                        "tertiary-fixed": "#acefe7",
+                        "secondary-container": "#ffab69",
+                        "primary-fixed-dim": "#82d3de",
+                        "on-secondary-fixed": "#2f1400",
+                        "on-secondary-container": "#783d01",
+                        "primary-container": "#006d77"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "base": "4px",
+                        "gutter": "16px",
+                        "container-padding-desktop": "32px",
+                        "stack-md": "16px",
+                        "stack-lg": "24px",
+                        "container-padding-mobile": "16px",
+                        "stack-sm": "8px",
+                        "section-gap": "40px"
+                    },
+                    "fontFamily": {
+                        "headline-md": ["Hanken Grotesk"],
+                        "label-md": ["Inter"],
+                        "headline-lg": ["Hanken Grotesk"],
+                        "body-lg": ["Inter"],
+                        "label-bold": ["Inter"],
+                        "headline-lg-mobile": ["Hanken Grotesk"],
+                        "body-md": ["Inter"],
+                        "body-sm": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "label-md": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "label-bold": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "headline-lg-mobile": ["26px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        /* Subtle Teal Map Pattern Background */
+        .bg-pattern-map {
+            background-color: #f9f9ff;
+            background-image: radial-gradient(#00535b 0.5px, transparent 0.5px), radial-gradient(#00535b 0.5px, #f9f9ff 0.5px);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+            opacity: 0.05;
+        }
+        
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="antialiased bg-surface text-on-surface font-body-md min-h-screen flex items-center justify-center relative overflow-hidden">
+<!-- Ambient Background Pattern -->
+<div class="absolute inset-0 bg-pattern-map z-0 pointer-events-none"></div>
+<!-- Main Container -->
+<main class="w-full max-w-md px-container-padding-mobile md:px-0 relative z-10">
+<!-- Login Card -->
+<div class="bg-surface-container-lowest rounded-xl p-stack-lg shadow-[0px_2px_12px_rgba(0,109,119,0.05)] w-full border border-outline-variant/30">
+<!-- Header / Logo -->
+<div class="text-center mb-stack-lg">
+<img class="h-20 mx-auto object-contain mb-stack-md" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCNj5MSzwTMkrpGepIIEJX3bsgK8EdojldmOGUASbOSS5Bklex79WQkF6JMTB863FvEcUPtFdAPPVV5_AgU72lpzpl1xinOljRBiqDbnmNolbDTmTQmvIPMp80KhWyKuToOMWk_WjNI01vxUqCRN44UDoS5HG1eGrBFycwBWgu5oB_KGDPy_ow9eiw-v94_VNe3cB-qVa1O2JdDPf87HG12ylx3X4ifcSIyjukxR-AZFoXBXVAeXXzd1g"/>
+<h1 class="font-headline-md text-headline-md text-on-surface">Sign in to your account</h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-stack-sm">Access the civic utility platform</p>
+</div>
+<!-- Form -->
+<form action="#" class="space-y-stack-md" method="POST">
+<!-- Email Input -->
+<div class="space-y-stack-sm">
+<label class="block font-label-md text-label-md text-on-surface" for="email">Email address</label>
+<div class="relative">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-outline">
+<span class="material-symbols-outlined text-[20px]">mail</span>
+</div>
+<input class="block w-full pl-10 pr-3 py-3 border border-outline-variant rounded-lg bg-surface-container-lowest text-on-surface font-body-md focus:ring-2 focus:ring-primary focus:border-primary transition-colors outline-none placeholder:text-outline-variant" id="email" name="email" placeholder="citizen@city.gov" required="" type="email"/>
+</div>
+</div>
+<!-- Password Input -->
+<div class="space-y-stack-sm">
+<div class="flex justify-between items-center">
+<label class="block font-label-md text-label-md text-on-surface" for="password">Password</label>
+<a class="font-label-md text-label-md text-primary hover:text-primary-container transition-colors" href="#">Forgot password?</a>
+</div>
+<div class="relative">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-outline">
+<span class="material-symbols-outlined text-[20px]">lock</span>
+</div>
+<input class="block w-full pl-10 pr-3 py-3 border border-outline-variant rounded-lg bg-surface-container-lowest text-on-surface font-body-md focus:ring-2 focus:ring-primary focus:border-primary transition-colors outline-none placeholder:text-outline-variant" id="password" name="password" placeholder="••••••••" required="" type="password"/>
+</div>
+</div>
+<!-- Primary Action -->
+<button class="w-full mt-stack-lg h-12 flex items-center justify-center bg-primary text-on-primary rounded-lg font-label-bold text-label-bold hover:bg-primary-container transition-colors active:scale-[0.98]" type="submit">
+                    Log in
+                </button>
+</form>
+<!-- Divider -->
+<div class="mt-stack-lg mb-stack-md flex items-center justify-center">
+<span class="font-body-sm text-body-sm text-on-surface-variant">
+                    Don't have an account? <a class="text-primary font-label-bold hover:underline" href="#">Sign up</a>
+</span>
+</div>
+<div class="relative py-stack-sm">
+<div class="absolute inset-0 flex items-center">
+<div class="w-full border-t border-outline-variant/50"></div>
+</div>
+<div class="relative flex justify-center text-sm">
+<span class="px-2 bg-surface-container-lowest text-outline font-label-md text-label-md">OR</span>
+</div>
+</div>
+<!-- Secondary Action -->
+<button class="w-full mt-stack-sm h-12 flex items-center justify-center bg-transparent border border-primary text-primary rounded-lg font-label-bold text-label-bold hover:bg-surface-variant/30 transition-colors active:scale-[0.98]" type="button">
+                Continue as guest
+            </button>
+</div>
+</main>
+</body></html>

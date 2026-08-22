@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Crosshair, ImagePlus, Loader2, MapPin, X } from "lucide-react";
+import { Check, Copy, Crosshair, ImagePlus, Loader2, MapPin, ThumbsUp, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -15,7 +16,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -25,11 +25,28 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import LocationPickerMapWrapper from "@/components/reports/LocationPickerMapWrapper";
-import { CATEGORY_LABELS, REPORT_CATEGORIES } from "@/lib/constants/reports";
-import type { ReportCategory } from "@/lib/types";
+import {
+  CATEGORY_LABELS,
+  REPORT_CATEGORIES,
+  STATUS_BADGE_VARIANTS,
+  STATUS_LABELS,
+} from "@/lib/constants/reports";
+import type { ReportCategory, ReportStatus } from "@/lib/types";
 
 // Default: area Pamulang
 const DEFAULT_COORDS = { lat: -6.3458, lng: 106.7394 };
+
+interface DuplicateCandidate {
+  id: string;
+  title: string;
+  vote_count: number | null;
+  distance_meters: number;
+  status: string;
+}
+
+function buildDuplicateKey(category: string, lat: number, lng: number) {
+  return `${category}|${lat.toFixed(6)}|${lng.toFixed(6)}`;
+}
 
 export default function ReportForm() {
   const router = useRouter();
@@ -43,6 +60,16 @@ export default function ReportForm() {
   const [coords, setCoords] = useState(DEFAULT_COORDS);
   const [locating, setLocating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // Duplicate detection: tidak memblokir submit, hanya menyarankan dukungan
+  const [candidates, setCandidates] = useState<DuplicateCandidate[]>([]);
+  const [checkingDuplicates, setCheckingDuplicates] = useState(false);
+  const [votedIds, setVotedIds] = useState<Set<string>>(new Set());
+  const [votingId, setVotingId] = useState<string | null>(null);
+  const dismissedKeyRef = useRef<string | null>(null);
+  // True setelah user menggeser/mengklik peta secara manual; auto-detect
+  // GPS awal tidak boleh menimpa posisi pilihan user.
+  const userAdjustedRef = useRef(false);
 
   // Auto-detect lokasi user saat halaman dibuka
   function detectLocation() {
@@ -72,8 +99,12 @@ export default function ReportForm() {
 
   useEffect(() => {
     if (!("geolocation" in navigator)) return;
+    let cancelled = false;
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        // Abaikan hasil yang datang terlambat (setelah unmount) atau jika
+        // user sudah memilih posisi secara manual di peta.
+        if (cancelled || userAdjustedRef.current) return;
         setCoords({
           lat: position.coords.latitude,
           lng: position.coords.longitude,
@@ -84,7 +115,128 @@ export default function ReportForm() {
       },
       { enableHighAccuracy: true, timeout: 10_000 },
     );
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  // Cek laporan serupa (debounce 600ms) saat kategori + koordinat terisi.
+  // Gagal fetch/error check_failed diabaikan diam-diam: fitur ini tidak
+  // boleh memblokir pembuatan laporan.
+  useEffect(() => {
+    const controller = new AbortController();
+    let cancelled = false;
+
+    // Reset di awal setiap run agar spinner tidak tertinggal dari run
+    // sebelumnya yang dibatalkan (cleanup-nya melewati finally).
+    setCheckingDuplicates(false);
+
+    if (!category) {
+      setCandidates([]);
+      return () => {
+        cancelled = true;
+        controller.abort();
+      };
+    }
+
+    const currentKey = buildDuplicateKey(category, coords.lat, coords.lng);
+    if (dismissedKeyRef.current === currentKey) {
+      setCandidates([]);
+      return () => {
+        cancelled = true;
+        controller.abort();
+      };
+    }
+
+    setCandidates([]);
+
+    const timer = setTimeout(async () => {
+      try {
+        setCheckingDuplicates(true);
+
+        const res = await fetch("/api/laporan/check-duplicate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ lat: coords.lat, lng: coords.lng, category }),
+          signal: controller.signal,
+        });
+
+        if (cancelled || !res.ok) return;
+
+        const data = await res.json().catch(() => null);
+        if (cancelled || !data || data.error === "check_failed") return;
+
+        const list = Array.isArray(data.candidates)
+          ? (data.candidates as DuplicateCandidate[])
+          : [];
+        setCandidates(list.slice(0, 3));
+      } catch {
+        // AbortError atau kegagalan jaringan: abaikan, jangan blokir form
+      } finally {
+        if (!cancelled) setCheckingDuplicates(false);
+      }
+    }, 600);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [category, coords.lat, coords.lng]);
+
+  async function handleSupport(candidateId: string) {
+    setVotingId(candidateId);
+
+    try {
+      const res = await fetch(`/api/laporan/${candidateId}/vote`, {
+        method: "POST",
+      });
+
+      if (res.status === 401) {
+        toast.info("Masuk terlebih dahulu untuk mendukung laporan ini.");
+        const next = encodeURIComponent(window.location.pathname);
+        router.push(`/auth/login?next=${next}`);
+        return;
+      }
+
+      if (res.status === 409) {
+        setVotedIds((prev) => new Set(prev).add(candidateId));
+        toast.info("Kamu sudah mendukung laporan ini sebelumnya.");
+        return;
+      }
+
+      if (!res.ok) {
+        toast.error("Gagal mendukung laporan. Coba lagi.");
+        return;
+      }
+
+      const data = await res.json().catch(() => null);
+      setVotedIds((prev) => new Set(prev).add(candidateId));
+
+      if (data && typeof data.vote_count === "number") {
+        setCandidates((prev) =>
+          prev.map((c) =>
+            c.id === candidateId ? { ...c, vote_count: data.vote_count } : c,
+          ),
+        );
+      }
+
+      toast.success("Dukungan terkirim. Terima kasih.");
+    } catch {
+      toast.error("Terjadi kesalahan jaringan. Coba lagi.");
+    } finally {
+      setVotingId(null);
+    }
+  }
+
+  function handleDismissDuplicates() {
+    dismissedKeyRef.current = buildDuplicateKey(
+      category,
+      coords.lat,
+      coords.lng,
+    );
+    setCandidates([]);
+  }
 
   function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0] ?? null;
@@ -157,6 +309,104 @@ export default function ReportForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Duplicate detection: banner di atas form agar langsung terlihat,
+          tidak memblokir submit */}
+      {checkingDuplicates && candidates.length === 0 && (
+        <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          Memeriksa laporan serupa di sekitar lokasi...
+        </p>
+      )}
+
+      {candidates.length > 0 && (
+        <Card className="border-secondary/40 bg-secondary/5">
+          <CardContent className="space-y-3 p-4">
+            <div className="flex items-start gap-2.5">
+              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary/15">
+                <Copy className="h-4 w-4 text-secondary-foreground" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-semibold">Laporan serupa ditemukan</p>
+                <p className="text-xs text-muted-foreground">
+                  Ada laporan aktif dengan kategori dan lokasi yang mirip.
+                  Mendukung laporan yang ada membantu penanganan lebih cepat.
+                </p>
+              </div>
+            </div>
+
+            <ul className="divide-y overflow-hidden rounded-md border bg-background">
+              {candidates.map((candidate) => {
+                const voted = votedIds.has(candidate.id);
+                const voting = votingId === candidate.id;
+
+                return (
+                  <li
+                    key={candidate.id}
+                    className="flex items-center justify-between gap-3 p-3"
+                  >
+                    <div className="min-w-0 space-y-1.5">
+                      <p className="truncate text-sm font-medium">
+                        {candidate.title}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                        <Badge
+                          variant={
+                            STATUS_BADGE_VARIANTS[
+                              candidate.status as ReportStatus
+                            ] ?? "outline"
+                          }
+                          className="px-1.5 py-0 text-[10px]"
+                        >
+                          {STATUS_LABELS[candidate.status as ReportStatus] ??
+                            candidate.status}
+                        </Badge>
+                        <span className="flex items-center gap-1">
+                          <ThumbsUp className="h-3 w-3" />
+                          {candidate.vote_count ?? 0}
+                        </span>
+                        <span>~{candidate.distance_meters} m</span>
+                      </div>
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 shrink-0 gap-1 text-xs"
+                      disabled={voted || voting}
+                      onClick={() => handleSupport(candidate.id)}
+                    >
+                      {voting ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : voted ? (
+                        <>
+                          <Check className="h-3.5 w-3.5" />
+                          Didukung
+                        </>
+                      ) : (
+                        "Dukung laporan ini"
+                      )}
+                    </Button>
+                  </li>
+                );
+              })}
+            </ul>
+
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs"
+                onClick={handleDismissDuplicates}
+              >
+                Lanjut buat laporan baru
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid gap-4 lg:grid-cols-5">
         {/* Kolom kiri: detail laporan */}
         <Card className="lg:col-span-3">
@@ -287,20 +537,25 @@ export default function ReportForm() {
 
           <CardContent className="space-y-3 p-4 pt-0">
             <div className="relative h-64 w-full sm:h-72">
-              {locating ? (
-                <Skeleton className="h-full w-full" />
-              ) : (
-                <LocationPickerMapWrapper
-                  lat={coords.lat}
-                  lng={coords.lng}
-                  onChange={(lat, lng) =>
-                    setCoords((prev) =>
-                      prev.lat === lat && prev.lng === lng
-                        ? prev
-                        : { lat, lng },
-                    )
-                  }
-                />
+              <LocationPickerMapWrapper
+                lat={coords.lat}
+                lng={coords.lng}
+                onChange={(lat, lng) => {
+                  userAdjustedRef.current = true;
+                  setCoords((prev) =>
+                    prev.lat === lat && prev.lng === lng
+                      ? prev
+                      : { lat, lng },
+                  );
+                }}
+              />
+              {locating && (
+                <div className="pointer-events-none absolute inset-0 z-[1100] flex items-start justify-center p-2">
+                  <span className="flex items-center gap-1.5 rounded-full border bg-background/90 px-3 py-1 text-xs text-muted-foreground shadow-sm">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Mendeteksi lokasi...
+                  </span>
+                </div>
               )}
             </div>
 

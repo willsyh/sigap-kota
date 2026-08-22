@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SigapKota - Report Detail</title>
+<!-- Google Fonts & Material Symbols -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@600;700&amp;family=Inter:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-container-high": "#dee8ff",
+                        "outline": "#6f797a",
+                        "secondary": "#8e4e14",
+                        "error-container": "#ffdad6",
+                        "surface-variant": "#d8e3fa",
+                        "error": "#ba1a1a",
+                        "tertiary": "#01544f",
+                        "primary": "#00535b",
+                        "surface": "#f9f9ff",
+                        "on-secondary": "#ffffff",
+                        "outline-variant": "#bec8ca",
+                        "on-tertiary-container": "#a9ece4",
+                        "tertiary-container": "#286d67",
+                        "on-primary-fixed": "#001f23",
+                        "inverse-surface": "#263142",
+                        "on-background": "#111c2c",
+                        "surface-bright": "#f9f9ff",
+                        "on-primary-container": "#9becf7",
+                        "surface-container-low": "#f0f3ff",
+                        "inverse-on-surface": "#ebf1ff",
+                        "inverse-primary": "#82d3de",
+                        "background": "#f9f9ff",
+                        "on-primary": "#ffffff",
+                        "surface-container-highest": "#d8e3fa",
+                        "on-tertiary-fixed": "#00201e",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary-fixed-dim": "#90d3cb",
+                        "on-tertiary-fixed-variant": "#00504b",
+                        "primary-fixed": "#9ff0fb",
+                        "on-surface-variant": "#3e494a",
+                        "on-error": "#ffffff",
+                        "on-tertiary": "#ffffff",
+                        "secondary-fixed-dim": "#ffb780",
+                        "on-surface": "#111c2c",
+                        "surface-dim": "#cfdaf1",
+                        "on-secondary-fixed-variant": "#6f3800",
+                        "on-error-container": "#93000a",
+                        "surface-container": "#e7eeff",
+                        "surface-tint": "#006972",
+                        "secondary-fixed": "#ffdcc4",
+                        "on-primary-fixed-variant": "#004f56",
+                        "tertiary-fixed": "#acefe7",
+                        "secondary-container": "#ffab69",
+                        "primary-fixed-dim": "#82d3de",
+                        "on-secondary-fixed": "#2f1400",
+                        "on-secondary-container": "#783d01",
+                        "primary-container": "#006d77"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    spacing: {
+                        "base": "4px",
+                        "gutter": "16px",
+                        "container-padding-desktop": "32px",
+                        "stack-md": "16px",
+                        "stack-lg": "24px",
+                        "container-padding-mobile": "16px",
+                        "stack-sm": "8px",
+                        "section-gap": "40px"
+                    },
+                    fontFamily: {
+                        "headline-md": ["Hanken Grotesk"],
+                        "label-md": ["Inter"],
+                        "headline-lg": ["Hanken Grotesk"],
+                        "body-lg": ["Inter"],
+                        "label-bold": ["Inter"],
+                        "headline-lg-mobile": ["Hanken Grotesk"],
+                        "body-md": ["Inter"],
+                        "body-sm": ["Inter"]
+                    },
+                    fontSize: {
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "label-md": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "label-bold": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "headline-lg-mobile": ["26px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        /* Base styles */
+        body { -webkit-tap-highlight-color: transparent; }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 20px); }
+        
+        /* Material Icon default style */
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        /* Before/After Slider specific styles */
+        .slider-handle {
+            touch-action: none; /* Prevent scrolling when dragging */
+        }
+        .after-image-container {
+            clip-path: polygon(0 0, 50% 0, 50% 100%, 0 100%);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body-md antialiased min-h-screen pb-safe">
+<!-- Detail Header (Replaces global TopAppBar for task-focused page) -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-4 h-16 bg-surface shadow-sm transition-colors duration-200">
+<button aria-label="Go back" class="p-2 -ml-2 rounded-full hover:bg-surface-variant/50 transition-colors flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<h1 class="text-headline-md font-headline-md font-bold text-primary truncate px-4 flex-1 text-center">Clogged drainage on Elm St</h1>
+<button aria-label="Share report" class="p-2 -mr-2 rounded-full hover:bg-surface-variant/50 transition-colors flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">share</span>
+</button>
+</header>
+<!-- Main Content Area -->
+<main class="pt-20 pb-12 px-4 md:px-gutter max-w-3xl mx-auto flex flex-col gap-stack-lg">
+<!-- Before/After Hero Slider -->
+<section class="relative w-full aspect-[4/3] md:aspect-video rounded-xl overflow-hidden shadow-sm bg-surface-container-low select-none" id="image-slider">
+<!-- Background Image (Before - Clogged) -->
+<img alt="Clogged drainage before cleaning" class="absolute inset-0 w-full h-full object-cover pointer-events-none" data-alt="A hyper-realistic photograph of a severely clogged street drainage grate on a suburban road. The metal grate is completely covered with wet autumn leaves, plastic wrappers, and muddy urban debris, causing a large pool of murky water to gather on the asphalt. Shot with a wide-angle lens under overcast, flat lighting to emphasize the grittiness and utility of the scene, maintaining a modern civic reporting aesthetic with high contrast and sharp details." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDmRN_BfjS9TlE2odAFm9bigU6ua3pFcQS-fAlEdZcoSfInlIx9g3n0Cpu594NpwVX79D1vDMWF1bX922l31H1wiubLmCvwU_W7OU8xB91fq05wqQkqRlo1g3YHrxnEZuIzcsVfrkbB2EJ43JRwxc-0R_O5jXkRVE62ydnLkSJH_R_tn0EpmaOz3OXDIOKX1t_4Je-5l7cbZDex6Nqrzv9h7D7FLEY-8I0zAx-QfbuRI2_soeTGMWtGmw"/>
+<!-- Foreground Image Container (After - Resolved) -->
+<div class="after-image-container absolute inset-0 w-full h-full pointer-events-none" id="after-image">
+<img alt="Cleaned drainage after resolution" class="absolute inset-0 w-full h-full object-cover pointer-events-none" data-alt="A hyper-realistic photograph of a freshly cleaned street drainage grate on a suburban road, perfectly matching the angle and location of the previous clogged image. The metal grate is now clearly visible and completely free of debris. The surrounding asphalt is slightly damp but entirely drained of standing water. Overcast, flat lighting, sharp resolution, emphasizing a successful civic resolution and clean infrastructure." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD1--ypUGYwFgUuwFV7x1mVGM6rFEBc-H32vBCGjva5FqqkjzfgtW_nhfpMdXC-ZDOFR_ZlqSfAvbO-RAXJb1icehFAImAzpMZymGkV5jAIP9TC1GaqwKTPx83UeVrZTohixO-AkzYiePzcfho3f1-OdfU1dephuH_8blbuFdHh3obWjFnGjTa3_u8XCyAkj5vuVNHpAnZZ4aQIQct2zSHAzejKu5R4MAd3Hh5dscnQadLsJqShgjOfZw"/>
+<!-- 'After' Label -->
+<div class="absolute top-4 left-4 bg-black/60 backdrop-blur-sm text-white px-3 py-1 rounded-full text-label-bold font-label-bold uppercase">After</div>
+</div>
+<!-- 'Before' Label -->
+<div class="absolute top-4 right-4 bg-black/60 backdrop-blur-sm text-white px-3 py-1 rounded-full text-label-bold font-label-bold uppercase pointer-events-none">Before</div>
+<!-- Slider Handle -->
+<div class="slider-handle absolute top-0 bottom-0 left-1/2 w-1 bg-white cursor-ew-resize flex items-center justify-center -translate-x-1/2 shadow-[0_0_10px_rgba(0,0,0,0.5)] z-10" id="slider-handle">
+<div class="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md">
+<span class="material-symbols-outlined text-outline text-[18px]">swap_horiz</span>
+</div>
+</div>
+</section>
+<!-- Status & Meta Information -->
+<section class="flex flex-col gap-stack-sm">
+<div class="flex items-center justify-between mb-1">
+<!-- Status Badge -->
+<span class="inline-flex items-center px-3 py-1 rounded-full bg-[#E6F4EA] text-[#137333] text-label-bold font-label-bold border border-[#CEEAD6]">
+<span class="material-symbols-outlined text-[16px] mr-1" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                    Resolved
+                </span>
+<span class="text-label-md font-label-md text-outline">Reported 3 days ago</span>
+</div>
+<h2 class="text-headline-lg-mobile md:text-headline-lg font-headline-lg-mobile md:font-headline-lg text-on-surface">Clogged drainage on Elm St</h2>
+<div class="flex flex-wrap gap-2 mt-2">
+<span class="px-3 py-1.5 bg-tertiary/15 text-tertiary-container rounded-lg text-label-bold font-label-bold uppercase tracking-wider">Flooding</span>
+<span class="px-3 py-1.5 bg-surface-container text-on-surface-variant rounded-lg text-label-md font-label-md flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">location_on</span>
+                    Elm St, Central District
+                </span>
+</div>
+</section>
+<!-- 3-Stage Progress Stepper -->
+<section class="bg-surface-container-lowest p-5 rounded-xl shadow-sm border border-surface-variant flex justify-between items-center relative overflow-hidden">
+<!-- Connecting Line -->
+<div class="absolute top-[28px] left-10 right-10 h-[2px] bg-primary -z-0"></div>
+<!-- Step 1: Reported -->
+<div class="flex flex-col items-center gap-2 relative z-10 bg-surface-container-lowest px-2 w-24">
+<div class="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+<span class="text-label-md font-label-md text-primary text-center">Reported</span>
+</div>
+<!-- Step 2: In Progress -->
+<div class="flex flex-col items-center gap-2 relative z-10 bg-surface-container-lowest px-2 w-24">
+<div class="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+<span class="text-label-md font-label-md text-primary text-center">In Progress</span>
+</div>
+<!-- Step 3: Resolved -->
+<div class="flex flex-col items-center gap-2 relative z-10 bg-surface-container-lowest px-2 w-24">
+<div class="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-md ring-4 ring-primary/20">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">done_all</span>
+</div>
+<span class="text-label-md font-label-md text-primary font-bold text-center">Resolved</span>
+</div>
+</section>
+<!-- Description Block -->
+<section class="flex flex-col gap-2">
+<h3 class="text-headline-md font-headline-md text-on-surface">Description</h3>
+<div class="bg-surface-container-lowest p-4 rounded-xl border border-surface-variant">
+<p class="text-body-md font-body-md text-on-surface-variant leading-relaxed">
+                    The main storm drain on the corner of Elm St and 4th Ave is completely blocked by debris, trash, and fallen branches. Following yesterday's heavy rain, a large pool of standing water has formed, covering part of the sidewalk and creating a hazard for pedestrians and passing vehicles.
+                </p>
+</div>
+</section>
+<!-- Embedded Map Area -->
+<section class="flex flex-col gap-2">
+<h3 class="text-headline-md font-headline-md text-on-surface">Location Map</h3>
+<div class="w-full h-48 rounded-xl overflow-hidden bg-surface-container-high relative border border-surface-variant shadow-sm">
+<img alt="Map view of location" class="w-full h-full object-cover opacity-90" data-location="Elm St, Central District, City" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDEC3o-uASt5kdVTf4ieKJ63cxRgKi3QqY_xDI13aDNKJCs_MQhF2vB7fD8-7QzRC5IGuyny3I7aZ019tbRi92IMfy4CXtUjFLv_akVvTY7nCsnOdbsssjxIXZs5my_KGxll4svNrfuQLgwlGV-vrawAUtaZNTe8SO3PvlcTNrRFmHboL9yFpCtSVnPDhGfN7IGH1bZ01xB82Y6dFu-c6uRq6uITzXptOwG3mPWEKnsewsKf2ajQjHNWg"/>
+<!-- Central Map Pin (Stylized) -->
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+<div class="w-10 h-10 bg-primary rounded-full flex items-center justify-center shadow-[0_4px_12px_rgba(0,83,91,0.4)] mb-1 relative z-10 border-2 border-white">
+<span class="material-symbols-outlined text-white text-[20px]" style="font-variation-settings: 'FILL' 1;">water_drop</span>
+</div>
+<div class="w-3 h-1.5 bg-black/30 rounded-[100%] blur-[1px]"></div>
+</div>
+</div>
+</section>
+<!-- Vote / Action Bar -->
+<section class="flex items-center gap-4 py-6 border-y border-surface-variant mt-2">
+<button class="flex items-center gap-2 px-6 py-3 rounded-full bg-primary-container text-on-primary-container hover:bg-primary-container/80 transition-colors shadow-sm active:scale-95">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">thumb_up</span>
+<span class="font-label-bold text-label-bold tracking-wide">45 VOTES</span>
+</button>
+<span class="text-label-md font-label-md text-outline leading-tight max-w-[200px]">
+                You and 44 neighbors flagged this as a priority.
+            </span>
+</section>
+<!-- Activity Timeline Log -->
+<section class="flex flex-col gap-4 pb-8">
+<h3 class="text-headline-md font-headline-md text-on-surface">Activity Log</h3>
+<div class="ml-4 pl-6 border-l-2 border-surface-variant space-y-6 relative py-2">
+<!-- Timeline Event 1: Resolved (Latest) -->
+<div class="relative">
+<!-- Node -->
+<div class="absolute -left-[33px] w-4 h-4 rounded-full bg-primary border-4 border-surface shadow-[0_0_0_2px_rgba(0,83,91,0.1)]"></div>
+<div class="bg-surface-container-lowest p-3 rounded-lg border border-surface-variant shadow-sm inline-block min-w-[80%]">
+<p class="text-body-md font-body-md text-on-surface font-semibold flex items-center gap-2">
+                            Resolved
+                            <span class="material-symbols-outlined text-primary text-[16px]" style="font-variation-settings: 'FILL' 1;">verified</span>
+</p>
+<p class="text-label-md font-label-md text-outline mt-1">Oct 15, 2:30 PM • Public Works Dept</p>
+</div>
+</div>
+<!-- Timeline Event 2: In Progress -->
+<div class="relative">
+<div class="absolute -left-[33px] w-4 h-4 rounded-full bg-outline-variant border-4 border-surface"></div>
+<div>
+<p class="text-body-md font-body-md text-on-surface">Investigation started</p>
+<p class="text-label-md font-label-md text-outline">Oct 13, 9:15 AM • Assigned to Crew B</p>
+</div>
+</div>
+<!-- Timeline Event 3: Reported -->
+<div class="relative">
+<div class="absolute -left-[33px] w-4 h-4 rounded-full bg-outline-variant border-4 border-surface"></div>
+<div>
+<p class="text-body-md font-body-md text-on-surface">Reported</p>
+<p class="text-label-md font-label-md text-outline">Oct 12, 4:45 PM • by John D.</p>
+</div>
+</div>
+<!-- Fading line tail -->
+<div class="absolute bottom-0 left-[-2px] w-[2px] h-8 bg-gradient-to-b from-surface-variant to-surface"></div>
+</div>
+</section>
+</main>
+<!-- Suppressed BottomNavBar: 
+         According to the Semantic Shell Mandate, task-focused sub-pages with a "Back" action 
+         must suppress the Bottom Navigation to prioritize the content canvas. -->
+<!-- Interactive Script for Before/After Slider -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const slider = document.getElementById('image-slider');
+            const afterImageContainer = document.getElementById('after-image');
+            const sliderHandle = document.getElementById('slider-handle');
+            let isDragging = false;
+
+            // Initialize position at 50%
+            updateSliderPosition(50);
+
+            // Mouse Events
+            sliderHandle.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                e.preventDefault(); // Prevent text selection
+            });
+
+            window.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                handleMove(e.clientX);
+            });
+
+            // Touch Events for Mobile
+            sliderHandle.addEventListener('touchstart', (e) => {
+                isDragging = true;
+            }, { passive: true });
+
+            window.addEventListener('touchend', () => {
+                isDragging = false;
+            });
+
+            window.addEventListener('touchmove', (e) => {
+                if (!isDragging) return;
+                handleMove(e.touches[0].clientX);
+            }, { passive: true });
+
+            // Core movement logic
+            function handleMove(clientX) {
+                const rect = slider.getBoundingClientRect();
+                // Calculate percentage based on mouse/touch position relative to the container
+                let percentage = ((clientX - rect.left) / rect.width) * 100;
+                
+                // Constrain between 0 and 100
+                percentage = Math.max(0, Math.min(100, percentage));
+                
+                updateSliderPosition(percentage);
+            }
+
+            function updateSliderPosition(percentage) {
+                // Adjust the clip-path of the top image container
+                afterImageContainer.style.clipPath = `polygon(0 0, ${percentage}% 0, ${percentage}% 100%, 0 100%)`;
+                // Move the handle
+                sliderHandle.style.left = `${percentage}%`;
+            }
+        });
+    </script>
+</body></html>

@@ -138,6 +138,21 @@ export interface Database {
         Args: { p_report_id: string };
         Returns: undefined;
       };
+      nearby_reports: {
+        Args: {
+          p_lat: number;
+          p_lng: number;
+          p_category: string;
+          p_radius_meters?: number;
+        };
+        Returns: {
+          id: string;
+          title: string;
+          vote_count: number | null;
+          distance_meters: number;
+          status: Database["public"]["Enums"]["report_status"];
+        }[];
+      };
     };
     Enums: {
       // Diimplementasikan sebagai text + CHECK constraint di Postgres.

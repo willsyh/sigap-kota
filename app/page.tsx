@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import Navbar from "@/components/Navbar";
 import MapView from "@/components/MapView";
@@ -15,13 +16,20 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ThumbsUp, Calendar, X, AlertCircle } from "lucide-react";
+import { ThumbsUp, Calendar, X, AlertCircle, Plus } from "lucide-react";
 
 async function fetchReports(): Promise<Report[]> {
   const res = await fetch("/api/laporan");
   if (!res.ok) throw new Error("Gagal memuat laporan");
   return res.json();
 }
+
+// Civic Horizon home defaults: city-wide view of Pamulang used whenever no
+// report is selected. Module-level constants keep prop identities stable so
+// the map controller never re-anchors on unrelated re-renders.
+const DEFAULT_CENTER: [number, number] = [-6.3458, 106.7394];
+const DEFAULT_ZOOM = 13;
+const SELECTED_REPORT_ZOOM = 15;
 
 export default function Home() {
   const { data: reports = [], isLoading, isError, refetch } = useQuery<Report[]>({
@@ -43,13 +51,27 @@ export default function Home() {
     });
   }, [reports, selectedCategory, selectedStatus]);
 
-  const handleResetFilters = () => {
+  // Stabilized callbacks: MapView correctness must not depend on the React
+  // compiler memoizing inline closures.
+  const handleResetFilters = useCallback(() => {
     setSelectedCategory("all");
     setSelectedStatus("all");
-  };
+  }, []);
+
+  const handleSelectReport = useCallback((report: Report) => {
+    setSelectedReport(report);
+  }, []);
+
+  const handleClosePreview = useCallback(() => setSelectedReport(null), []);
+
+  const handleSwitchToMarker = useCallback(() => setViewMode("marker"), []);
 
   return (
-    <div className="flex h-screen flex-col bg-background">
+    // Mobile: fill exactly the space above the fixed BottomNav by mirroring the
+    // padding RootLayout reserves (pb-[calc(5rem+env(safe-area-inset-bottom))]),
+    // so content + padding sums to 100dvh with no phantom page scroll and the
+    // preview card never hides behind the nav. Desktop keeps full h-screen.
+    <div className="flex h-[calc(100dvh-(5rem+env(safe-area-inset-bottom)))] flex-col bg-background md:h-screen">
       <Navbar />
 
       <main className="relative flex flex-1 flex-col overflow-hidden p-2 sm:p-4 gap-2 sm:gap-3">
@@ -104,13 +126,31 @@ export default function Home() {
             <MapView
               reports={filteredReports}
               selectedReportId={selectedReport?.id}
-              onSelectReport={(report) => setSelectedReport(report)}
-              center={selectedReport ? [selectedReport.latitude, selectedReport.longitude] : [-6.3458, 106.7394]}
-              zoom={selectedReport ? 15 : 13}
+              onSelectReport={handleSelectReport}
+              center={
+                selectedReport
+                  ? [selectedReport.latitude, selectedReport.longitude]
+                  : DEFAULT_CENTER
+              }
+              zoom={selectedReport ? SELECTED_REPORT_ZOOM : DEFAULT_ZOOM}
               viewMode={viewMode}
-              onSwitchToMarker={() => setViewMode("marker")}
+              onSwitchToMarker={handleSwitchToMarker}
             />
           )}
+
+          {/* Floating Action Button: sembunyikan halus saat kartu pratinjau terbuka
+              agar tidak menutupi kartu maupun atribusi peta */}
+          <Link
+            href="/laporan/baru"
+            aria-label="Buat Laporan"
+            className={`absolute bottom-24 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-secondary text-secondary-foreground shadow-lg shadow-secondary/30 transition-all duration-200 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:bottom-8 md:right-8 md:h-16 md:w-16 ${
+              selectedReport
+                ? "pointer-events-none translate-y-2 opacity-0"
+                : "opacity-100"
+            }`}
+          >
+            <Plus className="h-6 w-6" />
+          </Link>
 
           {/* Selected Report Quick Preview Card Overlay */}
           {selectedReport && (
@@ -136,8 +176,9 @@ export default function Home() {
                   <Button
                     variant="ghost"
                     size="icon"
+                    aria-label="Tutup pratinjau"
                     className="h-6 w-6 rounded-full -mr-1 -mt-1"
-                    onClick={() => setSelectedReport(null)}
+                    onClick={handleClosePreview}
                   >
                     <X className="h-3.5 w-3.5" />
                   </Button>
@@ -164,7 +205,10 @@ export default function Home() {
                   <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t">
                     <div className="flex items-center gap-1">
                       <ThumbsUp className="h-3.5 w-3.5 text-primary" />
-                      <span className="font-medium text-foreground">{selectedReport.vote_count}</span> dukungan
+                      <span className="font-medium text-foreground">
+                        {selectedReport.vote_count ?? 0}
+                      </span>{" "}
+                      dukungan
                     </div>
                     <div className="flex items-center gap-1">
                       <Calendar className="h-3.5 w-3.5" />

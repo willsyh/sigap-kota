@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -13,6 +14,7 @@ import {
   Clock,
   AlertTriangle,
   Loader2,
+  Lock,
   TrendingUp,
   LineChart,
 } from "lucide-react";
@@ -23,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { createClient } from "@/lib/supabase/client";
 import {
   Select,
   SelectContent,
@@ -200,18 +203,28 @@ function OverviewTab({ reports }: { reports: Report[] }) {
 
 // ============ B07: Admin Analytics ============
 function AnalyticsTab({ reports }: { reports: Report[] }) {
-  // Reports timeline (by date)
+  // Reports timeline (by date). Reports arrive sorted created_at DESC,
+  // so buckets must be sorted ascending to read oldest -> newest.
   const timelineData = useMemo(() => {
     const counts: Record<string, number> = {};
+    const bucketTime: Record<string, number> = {};
     for (const r of reports) {
-      const dateStr = new Date(r.created_at).toLocaleDateString("id-ID", {
+      const d = new Date(r.created_at);
+      const dateStr = d.toLocaleDateString("id-ID", {
         month: "short",
         day: "numeric",
       });
       counts[dateStr] = (counts[dateStr] || 0) + 1;
+      bucketTime[dateStr] = Math.min(
+        bucketTime[dateStr] ?? Number.POSITIVE_INFINITY,
+        d.getTime(),
+      );
     }
-    const max = Math.max(...Object.values(counts), 1);
-    return { counts, max };
+    const entries = Object.entries(counts).sort(
+      (a, b) => bucketTime[a[0]] - bucketTime[b[0]],
+    );
+    const max = Math.max(...entries.map(([, count]) => count), 1);
+    return { entries, max };
   }, [reports]);
 
   // Resolution metrics
@@ -289,14 +302,17 @@ function AnalyticsTab({ reports }: { reports: Report[] }) {
           <CardTitle className="text-sm">Tren Laporan Masuk</CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-4">
-          <div className="flex items-end gap-3 h-40 pt-4 border-b pb-2">
-            {Object.entries(timelineData.counts).map(([date, count]) => {
+          <div className="flex items-stretch gap-3 h-40 pt-4 border-b pb-2">
+            {timelineData.entries.map(([date, count]) => {
               const heightPct = (count / timelineData.max) * 100;
               return (
                 <div key={date} className="flex-1 flex flex-col items-center gap-1 group relative">
-                  <div className="text-[10px] text-muted-foreground font-medium">{count}</div>
-                  <div className="w-full bg-primary/20 hover:bg-primary/40 rounded-t transition-all" style={{ height: `${heightPct}%` }}>
-                    <div className="w-full h-full bg-primary rounded-t" style={{ height: `${heightPct}%` }} />
+                  <div className="text-[10px] text-muted-foreground font-medium shrink-0">{count}</div>
+                  <div className="w-full flex-1 flex items-end">
+                    <div
+                      className="w-full bg-primary hover:bg-primary/80 rounded-t transition-all"
+                      style={{ height: `${heightPct}%` }}
+                    />
                   </div>
                   <span className="text-[10px] text-muted-foreground truncate w-full text-center">{date}</span>
                 </div>
@@ -371,11 +387,10 @@ function AllReportsTab({ reports }: { reports: Report[] }) {
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState<ReportCategory | "all">("all");
   const [statFilter, setStatFilter] = useState<ReportStatus | "all">("all");
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [updatingIds, setUpdatingIds] = useState<Set<string>>(() => new Set());
 
   const statusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: ReportStatus }) => {
-      setUpdatingId(id);
       const res = await fetch(`/api/laporan/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -388,6 +403,9 @@ function AllReportsTab({ reports }: { reports: Report[] }) {
       }
       return res.json();
     },
+    onMutate: ({ id }) => {
+      setUpdatingIds((prev) => new Set(prev).add(id));
+    },
     onSuccess: () => {
       toast.success("Status laporan berhasil diperbarui");
       queryClient.invalidateQueries({ queryKey: ["admin_reports"] });
@@ -396,8 +414,12 @@ function AllReportsTab({ reports }: { reports: Report[] }) {
     onError: (err: Error) => {
       toast.error(err.message || "Gagal mengubah status");
     },
-    onSettled: () => {
-      setUpdatingId(null);
+    onSettled: (_data, _error, { id }) => {
+      setUpdatingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     },
   });
 
@@ -470,7 +492,7 @@ function AllReportsTab({ reports }: { reports: Report[] }) {
             </TableHeader>
             <TableBody>
               {filtered.map((r) => {
-                const isRowUpdating = updatingId === r.id;
+                const isRowUpdating = updatingIds.has(r.id);
                 return (
                   <TableRow key={r.id}>
                     <TableCell className="text-sm font-medium max-w-[280px] truncate">
@@ -502,7 +524,7 @@ function AllReportsTab({ reports }: { reports: Report[] }) {
                           disabled={isRowUpdating}
                           onValueChange={(v) => handleStatusChange(r.id, v as ReportStatus)}
                         >
-                          <SelectTrigger className="h-7 w-[140px] text-xs">
+                          <SelectTrigger className="h-9 w-[140px] text-xs">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -534,11 +556,30 @@ function AllReportsTab({ reports }: { reports: Report[] }) {
 }
 
 // ============ Main Admin Page ============
+type AdminAccess = "loading" | "allowed" | "denied";
+
 export default function AdminPage() {
+  const router = useRouter();
+  const [access, setAccess] = useState<AdminAccess>("loading");
   const { data: reports = [], isLoading, isError, refetch } = useQuery<Report[]>({
     queryKey: ["admin_reports"],
     queryFn: fetchAdminReports,
   });
+
+  useEffect(() => {
+    let active = true;
+    createClient()
+      .auth.getUser()
+      .then(({ data }) => {
+        if (!active) return;
+        setAccess(data.user?.user_metadata?.role === "admin" ? "allowed" : "denied");
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const showSkeleton = access === "loading" || isLoading;
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -547,7 +588,7 @@ export default function AdminPage() {
       <main className="container flex-1 px-4 py-6 space-y-4">
         <h1 className="text-2xl font-bold tracking-tight">Panel Admin</h1>
 
-        {isLoading ? (
+        {showSkeleton ? (
           <div className="space-y-4">
             <Skeleton className="h-9 w-48" />
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -557,6 +598,17 @@ export default function AdminPage() {
             </div>
             <Skeleton className="h-64 w-full" />
           </div>
+        ) : access !== "allowed" ? (
+          <div className="flex flex-col items-center py-20 text-center">
+            <Lock className="h-10 w-10 text-muted-foreground mb-3" />
+            <h3 className="text-base font-semibold">Akses ditolak</h3>
+            <p className="text-xs text-muted-foreground mt-1 max-w-sm">
+              Halaman ini hanya dapat diakses oleh admin atau petugas. Silakan kembali ke peta utama untuk melihat laporan.
+            </p>
+            <Button variant="outline" size="sm" className="mt-4 h-9 px-3" onClick={() => router.push("/")}>
+              Kembali ke Beranda
+            </Button>
+          </div>
         ) : isError ? (
           <div className="flex flex-col items-center py-20 text-center">
             <AlertCircle className="h-10 w-10 text-destructive mb-3" />
@@ -564,13 +616,13 @@ export default function AdminPage() {
             <p className="text-xs text-muted-foreground mt-1">
               Pastikan kamu memiliki akses admin dan koneksi database aktif.
             </p>
-            <Button variant="outline" size="sm" className="mt-4" onClick={() => refetch()}>
+            <Button variant="outline" size="sm" className="mt-4 h-9 px-3" onClick={() => refetch()}>
               Coba Lagi
             </Button>
           </div>
         ) : (
           <Tabs defaultValue="overview">
-            <TabsList>
+            <TabsList className="h-9">
               <TabsTrigger value="overview">
                 <BarChart3 className="h-4 w-4 mr-1" />
                 Overview

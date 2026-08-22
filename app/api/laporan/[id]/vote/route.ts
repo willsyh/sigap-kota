@@ -46,6 +46,15 @@ export async function POST(
 
   if (rpcError) {
     console.error("Gagal increment vote_count:", rpcError.message);
+    // Kompensasi: hapus vote yang baru saja dibuat agar pengguna
+    // dapat mencoba lagi dan vote_count tidak tertinggal.
+    // Memakai admin client karena tabel votes tidak punya
+    // policy DELETE untuk RLS.
+    await supabase
+      .from("votes")
+      .delete()
+      .match({ report_id: id, user_id: user.id });
+
     return NextResponse.json(
       { error: "Gagal menghitung vote" },
       { status: 500 },

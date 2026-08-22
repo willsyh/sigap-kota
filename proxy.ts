@@ -1,8 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-
-const PROTECTED_USER_ROUTES = ["/laporan/baru"];
-const PROTECTED_ADMIN_ROUTES = ["/admin"];
+import type { User } from "@supabase/supabase-js";
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -28,36 +26,46 @@ export async function proxy(request: NextRequest) {
     },
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Call getUser early so refreshed session cookies propagate via setAll.
+  let user: User | null = null;
+  try {
+    const {
+      data: { user: authUser },
+    } = await supabase.auth.getUser();
+    user = authUser;
+  } catch {
+    user = null;
+  }
 
   const pathname = request.nextUrl.pathname;
 
-  if (!user) {
-    if (PROTECTED_USER_ROUTES.some((route) => pathname.startsWith(route))) {
+  if (!user && pathname.startsWith("/laporan/baru")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/auth/login";
+    url.searchParams.set("next", pathname);
+    return NextResponse.redirect(url);
+  }
+
+  if (pathname.startsWith("/admin")) {
+    if (!user) {
       const url = request.nextUrl.clone();
       url.pathname = "/auth/login";
+      url.searchParams.set("next", pathname);
       return NextResponse.redirect(url);
     }
 
-    if (PROTECTED_ADMIN_ROUTES.some((route) => pathname.startsWith(route))) {
+    if (user.user_metadata?.role !== "admin") {
       const url = request.nextUrl.clone();
       url.pathname = "/";
       return NextResponse.redirect(url);
     }
-  } else if (
-    PROTECTED_ADMIN_ROUTES.some((route) => pathname.startsWith(route)) &&
-    user.user_metadata?.role !== "admin"
-  ) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/";
-    return NextResponse.redirect(url);
   }
 
   return response;
 }
 
 export const config = {
-  matcher: ["/laporan/baru", "/admin/:path*"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+  ],
 };

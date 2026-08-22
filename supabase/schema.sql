@@ -107,3 +107,49 @@ values (
   array['image/jpeg','image/png','image/webp']
 )
 on conflict (id) do nothing;
+
+-- ------------------------------------------------------------
+-- Function: nearby_reports (duplicate detection)
+-- Laporan aktif dengan kategori sama dalam radius tertentu (meter).
+-- Dipanggil dari API route via .rpc('nearby_reports', ...)
+-- ------------------------------------------------------------
+create or replace function nearby_reports(
+  p_lat float8,
+  p_lng float8,
+  p_category text,
+  p_radius_meters float8 default 100
+)
+returns table (
+  id uuid,
+  title text,
+  vote_count int,
+  distance_meters float8,
+  status text
+)
+language sql
+stable
+as $$
+  select r.id,
+         r.title,
+         r.vote_count,
+         (6371000 * acos(
+           least(1,
+             cos(radians(p_lat)) * cos(radians(r.latitude)) *
+             cos(radians(r.longitude) - radians(p_lng)) +
+             sin(radians(p_lat)) * sin(radians(r.latitude))
+           )
+         )) as distance_meters,
+         r.status::text
+  from reports r
+  where r.category = p_category
+    and r.status <> 'selesai'
+    and (6371000 * acos(
+           least(1,
+             cos(radians(p_lat)) * cos(radians(r.latitude)) *
+             cos(radians(r.longitude) - radians(p_lng)) +
+             sin(radians(p_lat)) * sin(radians(r.latitude))
+           )
+         )) <= p_radius_meters
+  order by distance_meters asc
+  limit 3;
+$$;

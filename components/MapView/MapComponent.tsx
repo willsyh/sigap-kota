@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet.heat";
@@ -14,7 +16,6 @@ import {
 } from "@/lib/constants/reports";
 import type { Report } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 
 interface MapComponentProps {
   reports: Report[];
@@ -25,6 +26,10 @@ interface MapComponentProps {
   viewMode?: "marker" | "heatmap";
   onSwitchToMarker?: () => void;
 }
+
+// Heatmap interaction cap: clicks zoom in by up to two steps and never past
+// this zoom; reaching it hands control over to the marker view.
+const HEATMAP_MAX_ZOOM = 16;
 
 // B08: Heatmap Layer Component using leaflet.heat with click-to-zoom
 function HeatmapLayer({ reports, onSwitchToMarker }: { reports: Report[]; onSwitchToMarker?: () => void }) {
@@ -46,23 +51,34 @@ function HeatmapLayer({ reports, onSwitchToMarker }: { reports: Report[]; onSwit
       blur: 15,
       maxZoom: 17,
       max: 1.0,
+      // Civic Horizon ramp: teal for sparse activity, brand amber in the
+      // middle, strong red at peak density.
       gradient: {
-        0.2: "#3b82f6",
-        0.4: "#06b6d4",
-        0.6: "#10b981",
-        0.8: "#f59e0b",
-        1.0: "#ef4444",
+        0.2: "#0f766e",
+        0.4: "#14b8a6",
+        0.6: "#f59e0b",
+        0.8: "#ea580c",
+        1.0: "#dc2626",
       },
     });
 
     heatLayer.addTo(map);
 
     const handleMapClick = (e: L.LeafletMouseEvent) => {
-      // Zoom in on clicked heatmap area & auto switch to pin view if zoomed close
+      // Zoom in toward the clicked hotspot, capped so the flight stays
+      // readable; only once fully zoomed in do we hand over to pin view.
+      // Never fly outward: if the user already hand-zoomed past the cap,
+      // hand over to pin view without moving the viewport.
       const currentZoom = map.getZoom();
-      const newZoom = Math.min(currentZoom + 2, 18);
+      if (currentZoom >= HEATMAP_MAX_ZOOM) {
+        if (onSwitchToMarker) {
+          onSwitchToMarker();
+        }
+        return;
+      }
+      const newZoom = Math.min(currentZoom + 2, HEATMAP_MAX_ZOOM);
       map.flyTo(e.latlng, newZoom, { animate: true });
-      if (newZoom >= 16 && onSwitchToMarker) {
+      if (newZoom >= HEATMAP_MAX_ZOOM && onSwitchToMarker) {
         onSwitchToMarker();
       }
     };
@@ -78,13 +94,35 @@ function HeatmapLayer({ reports, onSwitchToMarker }: { reports: Report[]; onSwit
   return null;
 }
 
-// Center view controller
-function MapViewController({ center, zoom }: { center: [number, number]; zoom: number }) {
+// Center view controller.
+//
+// The map must fly ONLY when a report becomes selected or the selection moves
+// to a different report. Deselection and view-mode switches keep the current
+// viewport, so a heatmap flight is never cancelled by an accompanying
+// re-render. The previously-selected id is tracked in a ref so correctness
+// does not depend on prop identity (fresh array literals are fine).
+function MapViewController({
+  center,
+  zoom,
+  selectedReportId,
+}: {
+  center: [number, number];
+  zoom: number;
+  selectedReportId?: string | null;
+}) {
   const map = useMap();
+  const prevSelectedIdRef = useRef<string | null | undefined>(selectedReportId);
 
   useEffect(() => {
-    map.setView(center, zoom, { animate: true });
-  }, [center, zoom, map]);
+    const previousId = prevSelectedIdRef.current;
+    prevSelectedIdRef.current = selectedReportId;
+
+    // No transition yet (initial mount) or selection was cleared: keep viewport.
+    if (selectedReportId == null || selectedReportId === previousId) return;
+
+    // Actual selection transition: fly to the newly selected report.
+    map.flyTo(center, zoom, { animate: true });
+  }, [center, zoom, selectedReportId, map]);
 
   return null;
 }
@@ -147,7 +185,7 @@ export default function MapComponent({
           maxZoom={19}
         />
 
-        <MapViewController center={center} zoom={zoom} />
+        <MapViewController center={center} zoom={zoom} selectedReportId={selectedReportId} />
 
         {viewMode === "heatmap" ? (
           <HeatmapLayer reports={reports} onSwitchToMarker={onSwitchToMarker} />
@@ -201,15 +239,14 @@ export default function MapComponent({
                     )}
 
                     <div className="flex items-center justify-between pt-1 text-xs text-muted-foreground border-t">
-                      <span>{report.vote_count} Dukungan</span>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        className="h-7 text-xs px-2"
-                        onClick={() => onSelectReport?.(report)}
+                      <span>{report.vote_count ?? 0} Dukungan</span>
+                      <Link
+                        href={`/laporan/${report.id}`}
+                        className="inline-flex h-7 items-center gap-0.5 rounded-md bg-secondary px-2.5 text-xs font-medium text-secondary-foreground transition-colors hover:bg-secondary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
                         Lihat Detail
-                      </Button>
+                        <ChevronRight className="h-3.5 w-3.5" />
+                      </Link>
                     </div>
                   </div>
                 </Popup>

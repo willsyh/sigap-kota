@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SigapKota - New Report</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Configuration -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-high": "#dee8ff",
+                    "outline": "#6f797a",
+                    "secondary": "#8e4e14",
+                    "error-container": "#ffdad6",
+                    "surface-variant": "#d8e3fa",
+                    "error": "#ba1a1a",
+                    "tertiary": "#01544f",
+                    "primary": "#00535b",
+                    "surface": "#f9f9ff",
+                    "on-secondary": "#ffffff",
+                    "outline-variant": "#bec8ca",
+                    "on-tertiary-container": "#a9ece4",
+                    "tertiary-container": "#286d67",
+                    "on-primary-fixed": "#001f23",
+                    "inverse-surface": "#263142",
+                    "on-background": "#111c2c",
+                    "surface-bright": "#f9f9ff",
+                    "on-primary-container": "#9becf7",
+                    "surface-container-low": "#f0f3ff",
+                    "inverse-on-surface": "#ebf1ff",
+                    "inverse-primary": "#82d3de",
+                    "background": "#f9f9ff",
+                    "on-primary": "#ffffff",
+                    "surface-container-highest": "#d8e3fa",
+                    "on-tertiary-fixed": "#00201e",
+                    "surface-container-lowest": "#ffffff",
+                    "tertiary-fixed-dim": "#90d3cb",
+                    "on-tertiary-fixed-variant": "#00504b",
+                    "primary-fixed": "#9ff0fb",
+                    "on-surface-variant": "#3e494a",
+                    "on-error": "#ffffff",
+                    "on-tertiary": "#ffffff",
+                    "secondary-fixed-dim": "#ffb780",
+                    "on-surface": "#111c2c",
+                    "surface-dim": "#cfdaf1",
+                    "on-secondary-fixed-variant": "#6f3800",
+                    "on-error-container": "#93000a",
+                    "surface-container": "#e7eeff",
+                    "surface-tint": "#006972",
+                    "secondary-fixed": "#ffdcc4",
+                    "on-primary-fixed-variant": "#004f56",
+                    "tertiary-fixed": "#acefe7",
+                    "secondary-container": "#ffab69",
+                    "primary-fixed-dim": "#82d3de",
+                    "on-secondary-fixed": "#2f1400",
+                    "on-secondary-container": "#783d01",
+                    "primary-container": "#006d77"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "base": "4px",
+                    "gutter": "16px",
+                    "container-padding-desktop": "32px",
+                    "stack-md": "16px",
+                    "stack-lg": "24px",
+                    "container-padding-mobile": "16px",
+                    "stack-sm": "8px",
+                    "section-gap": "40px"
+            },
+            "fontFamily": {
+                    "headline-md": [
+                            "Hanken Grotesk"
+                    ],
+                    "label-md": [
+                            "Inter"
+                    ],
+                    "headline-lg": [
+                            "Hanken Grotesk"
+                    ],
+                    "body-lg": [
+                            "Inter"
+                    ],
+                    "label-bold": [
+                            "Inter"
+                    ],
+                    "headline-lg-mobile": [
+                            "Hanken Grotesk"
+                    ],
+                    "body-md": [
+                            "Inter"
+                    ],
+                    "body-sm": [
+                            "Inter"
+                    ]
+            },
+            "fontSize": {
+                    "headline-md": [
+                            "20px",
+                            {
+                                    "lineHeight": "28px",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "label-md": [
+                            "12px",
+                            {
+                                    "lineHeight": "16px",
+                                    "fontWeight": "500"
+                            }
+                    ],
+                    "headline-lg": [
+                            "32px",
+                            {
+                                    "lineHeight": "40px",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "body-lg": [
+                            "18px",
+                            {
+                                    "lineHeight": "28px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "label-bold": [
+                            "12px",
+                            {
+                                    "lineHeight": "16px",
+                                    "letterSpacing": "0.05em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "headline-lg-mobile": [
+                            "26px",
+                            {
+                                    "lineHeight": "32px",
+                                    "letterSpacing": "-0.01em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "body-md": [
+                            "16px",
+                            {
+                                    "lineHeight": "24px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "body-sm": [
+                            "14px",
+                            {
+                                    "lineHeight": "20px",
+                                    "fontWeight": "400"
+                            }
+                    ]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        /* Custom scrollbar for horizontal chip list */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface antialiased flex flex-col min-h-screen">
+<!-- Offline Indicator Banner -->
+<div class="w-full bg-error-container text-on-error-container flex items-center justify-center py-2 px-gutter gap-2 shadow-sm z-50">
+<span class="material-symbols-outlined text-[18px]">wifi_off</span>
+<span class="font-label-md text-label-md">You're offline — report will be saved and sent automatically</span>
+</div>
+<!-- Task-Focused Header (Suppressed main nav shell) -->
+<header class="bg-surface text-on-surface flex items-center px-4 h-16 shadow-sm sticky top-0 z-40">
+<button class="p-2 -ml-2 rounded-full hover:bg-surface-variant/50 transition-colors text-on-surface">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<h1 class="ml-2 font-headline-md text-headline-md font-bold text-on-surface">Report an issue</h1>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 overflow-y-auto pb-32">
+<div class="max-w-[600px] mx-auto w-full p-gutter flex flex-col gap-stack-lg mt-stack-md">
+<!-- Alert Banner -->
+<div class="bg-surface-variant/50 border border-outline-variant/30 rounded-xl p-3 flex gap-3 items-center shadow-[0px_2px_12px_rgba(0,109,119,0.05)]">
+<div class="w-10 h-10 shrink-0 rounded-lg overflow-hidden relative border border-outline-variant/50">
+<img class="w-full h-full object-cover" data-alt="A small thumbnail showing a damaged streetlight pole bent at a harsh angle against a cloudy grey sky, evoking a sense of urban decay and the need for urgent municipal repair. The lighting is diffused and flat." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCjWtygeDh1R2P9gZu2hUGsQV6dxNrMGs-ozs1UhvZXs16xVF1QVFrwC5VAwFO5iuvWWCae0gcgcgCNSwVdDp4l2kcscgHa5vL1JRO5cXMpylQvSd1erOqI4rpY12JnDLSpLuAmJ6COdY1MymdLTR6sWIA33yUbXALj00ClzAM73iUU4Eq5KYxvCkHKoW6NH0Ei3aSYZYw-MBdpY-_OXh5D7_JKzh7YsKId13XnG4EcD1G5jKRIRubXNg"/>
+</div>
+<div class="flex-1">
+<p class="font-label-md text-label-md text-on-surface-variant">Similar report found nearby — tap to view and vote instead of duplicating</p>
+</div>
+<button class="shrink-0 p-1 rounded-full hover:bg-surface-variant text-primary">
+<span class="material-symbols-outlined text-[20px]">chevron_right</span>
+</button>
+</div>
+<!-- Photo Upload Area -->
+<section class="flex flex-col gap-stack-sm">
+<label class="font-label-bold text-label-bold text-on-surface uppercase">Evidence Photos</label>
+<div class="flex gap-stack-md overflow-x-auto no-scrollbar pb-1">
+<!-- Add Photo Button -->
+<button class="shrink-0 w-28 h-28 border-2 border-dashed border-outline-variant rounded-xl flex flex-col items-center justify-center gap-2 bg-surface-container-low hover:bg-surface-container transition-colors text-outline focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+<span class="material-symbols-outlined text-outline">photo_camera</span>
+<span class="font-label-md text-label-md text-outline">Add photo</span>
+</button>
+<!-- Preview Thumbnail -->
+<div class="shrink-0 w-28 h-28 rounded-xl overflow-hidden relative shadow-sm border border-outline-variant/30 group">
+<img class="w-full h-full object-cover" data-alt="A close up view of a broken streetlight fixture dangling loosely from its mounting arm against a twilight sky. The glass housing is cracked, exposing the inner bulb, conveying a realistic modern municipal issue in a clean, high-resolution style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC78h-lThxPuFj1LCUWBqpsy7ZAkgf1sPMDBKIppuFuFQBGPngHhdQZ9gD5LW-NfH-SpMQc9aSzHDY-pmKMH5IuWELkGshMkcZ4V-IIQFl0K66HiiZOFJjKG1nw1-DP_0IXhQpxUx5askE1M1Fg4BonmIqGMg277U7e1GRuPKQxG8IWO-drdaAYy1Nt1StYJTTEa_RI7Erbal5dsNDHAUMz2l3ZaRr8dKjWTxziJwCHdKH3Ut1bMi4M1g"/>
+<button class="absolute top-1 right-1 bg-surface/80 rounded-full p-1 text-on-surface hover:bg-error hover:text-on-error transition-colors backdrop-blur-sm">
+<span class="material-symbols-outlined text-[16px]">close</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Categories -->
+<section class="flex flex-col gap-stack-sm">
+<label class="font-label-bold text-label-bold text-on-surface uppercase">Category</label>
+<div class="flex gap-2 overflow-x-auto no-scrollbar pb-2 -mx-gutter px-gutter">
+<!-- Unselected Chip -->
+<button class="shrink-0 flex items-center gap-2 px-stack-md py-2 border border-outline-variant rounded-full text-on-surface-variant bg-surface hover:bg-surface-variant/30 transition-colors font-label-md text-label-md">
+<span class="material-symbols-outlined text-[18px]">trip_origin</span>
+                        Pothole
+                    </button>
+<button class="shrink-0 flex items-center gap-2 px-stack-md py-2 border border-outline-variant rounded-full text-on-surface-variant bg-surface hover:bg-surface-variant/30 transition-colors font-label-md text-label-md">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+                        Garbage
+                    </button>
+<button class="shrink-0 flex items-center gap-2 px-stack-md py-2 border border-outline-variant rounded-full text-on-surface-variant bg-surface hover:bg-surface-variant/30 transition-colors font-label-md text-label-md">
+<span class="material-symbols-outlined text-[18px]">water_drop</span>
+                        Flooding
+                    </button>
+<!-- Selected Chip (Tertiary Teal 15% opaqueness simulated via bg class + border) -->
+<button class="shrink-0 flex items-center gap-2 px-stack-md py-2 border-2 border-tertiary bg-[#01544f]/15 rounded-full text-tertiary font-label-bold text-label-bold shadow-sm">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">lightbulb</span>
+                        Streetlight
+                    </button>
+<button class="shrink-0 flex items-center gap-2 px-stack-md py-2 border border-outline-variant rounded-full text-on-surface-variant bg-surface hover:bg-surface-variant/30 transition-colors font-label-md text-label-md">
+<span class="material-symbols-outlined text-[18px]">location_city</span>
+                        Public Facility
+                    </button>
+<button class="shrink-0 flex items-center gap-2 px-stack-md py-2 border border-outline-variant rounded-full text-on-surface-variant bg-surface hover:bg-surface-variant/30 transition-colors font-label-md text-label-md">
+<span class="material-symbols-outlined text-[18px]">more_horiz</span>
+                        Other
+                    </button>
+</div>
+</section>
+<!-- Details Form -->
+<section class="flex flex-col gap-stack-md">
+<div class="flex flex-col gap-base">
+<label class="font-label-bold text-label-bold text-on-surface uppercase" for="report-title">Title</label>
+<input class="w-full bg-surface-container-lowest border border-outline-variant rounded-lg p-stack-sm font-body-md text-body-md text-on-surface focus:outline-none focus:border-[2px] focus:border-primary focus:ring-0 transition-all shadow-[0px_2px_12px_rgba(0,109,119,0.05)]" id="report-title" placeholder="Brief summary of the issue" type="text" value="Broken streetlight at intersection"/>
+</div>
+<div class="flex flex-col gap-base">
+<label class="font-label-bold text-label-bold text-on-surface uppercase" for="report-desc">Description</label>
+<textarea class="w-full bg-surface-container-lowest border border-outline-variant rounded-lg p-stack-sm font-body-md text-body-md text-on-surface focus:outline-none focus:border-[2px] focus:border-primary focus:ring-0 transition-all resize-none shadow-[0px_2px_12px_rgba(0,109,119,0.05)]" id="report-desc" placeholder="Provide more details to help the city locate and fix the issue..." rows="4">The light on the northeast corner has been completely broken since the storm last night. It poses a safety hazard for pedestrians.</textarea>
+</div>
+</section>
+<!-- Location Section -->
+<section class="flex flex-col gap-stack-sm">
+<label class="font-label-bold text-label-bold text-on-surface uppercase">Location</label>
+<div class="flex flex-col gap-3 bg-surface-container-lowest rounded-xl border border-outline-variant/50 p-1 shadow-[0px_2px_12px_rgba(0,109,119,0.05)]">
+<!-- Map Preview -->
+<div class="relative w-full h-32 rounded-lg overflow-hidden bg-surface-variant">
+<img class="w-full h-full object-cover" data-alt="A clean, modern minimalist top-down digital map view of an urban intersection in a bright, light-mode palette. The roads are rendered in crisp off-white against pale grey city blocks. A subtle drop shadow adds depth to the buildings." data-location="Jl. Sudirman No. 45" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAj_rH53GlYvdtdp3aMl2IvjizxHaIPBlfcjwrHeL8x4zXnowmz8QZEenLETB5XW7-7TDA20iyOVGb141iru4TSPZZ3-O_K4m0vsrUx4WU4c3s5olicpKKURB5CfoU6CnOpKAjULeZdIMHvreD8q68NZ3ycpy-HFZX-MvCFNRwSfpdZFPJMZAHOVz3LxQJeCmlCiEI1L7xDOOxOK31fYdrAOZrrJsxV8GTorW6k2CnXBNvQ0Sb_ovw5gA"/>
+<!-- Draggable Pin Marker (Simulated) -->
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-full pb-1 drop-shadow-md">
+<div class="w-8 h-8 bg-error rounded-full rounded-br-none rotate-45 flex items-center justify-center border-2 border-surface-container-lowest shadow-sm">
+<div class="-rotate-45 text-surface-container-lowest">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">lightbulb</span>
+</div>
+</div>
+</div>
+<!-- Use Current Location Button Floating on Map -->
+<div class="absolute top-2 right-2">
+<button class="bg-surface shadow-md rounded-full px-3 py-1.5 flex items-center gap-1.5 text-primary hover:bg-surface-variant/50 transition-colors border border-outline-variant/20">
+<span class="material-symbols-outlined text-[16px]">my_location</span>
+<span class="font-label-md text-label-md font-bold">Use my current location</span>
+</button>
+</div>
+</div>
+<!-- Detected Address Bar -->
+<div class="flex items-center gap-2 p-2 px-3 bg-surface-container-low rounded-lg">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">location_on</span>
+<div class="flex-1 truncate">
+<span class="font-body-sm text-body-sm text-on-surface">Jl. Sudirman No. 45</span>
+</div>
+<button class="text-primary font-label-md text-label-md hover:underline">Edit</button>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- Sticky Bottom Submit Action -->
+<div class="fixed bottom-0 left-0 w-full bg-surface shadow-[0px_-4px_20px_rgba(0,0,0,0.08)] p-gutter pb-safe pt-stack-md z-50 rounded-t-xl border-t border-outline-variant/20">
+<div class="max-w-[600px] mx-auto w-full">
+<button class="w-full bg-primary text-on-primary font-headline-md text-headline-md h-[48px] rounded-lg flex items-center justify-center shadow-md active:scale-[0.98] transition-transform">
+                Submit report
+            </button>
+</div>
+</div>
+</body></html>

@@ -130,7 +130,9 @@ export default function ReportDetailPage() {
     mutationFn: async () => {
       if (!currentUserId) {
         toast.info("Silakan masuk terlebih dahulu untuk mendukung laporan.");
-        router.push("/auth/login");
+        router.push(
+          `/auth/login?next=${encodeURIComponent(`/laporan/${reportId}`)}`,
+        );
         throw new Error("UNAUTHORIZED");
       }
 

@@ -17,7 +17,9 @@ export async function GET(request: NextRequest) {
   const kategori = searchParams.get("kategori");
   const status = searchParams.get("status");
 
-  const supabase = createAdminClient();
+  // Client terikat cookie (anon/authenticated) agar visibilitas
+  // laporan diatur oleh RLS, bukan service-role.
+  const supabase = await createClient();
 
   let query = supabase.from("reports").select("*").order("created_at", {
     ascending: false,

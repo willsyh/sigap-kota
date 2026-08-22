@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Hanken_Grotesk } from "next/font/google";
 
 import { QueryProvider } from "@/components/providers/QueryProvider";
+import BottomNav from "@/components/BottomNav";
 import { Toaster } from "@/components/ui/sonner";
 
 import "leaflet/dist/leaflet.css";
@@ -14,6 +15,11 @@ const geistSans = Geist({
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+const hankenGrotesk = Hanken_Grotesk({
+  variable: "--font-hanken",
   subsets: ["latin"],
 });
 
@@ -30,11 +36,15 @@ export default function RootLayout({
   return (
     <html
       lang="id"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${hankenGrotesk.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
         <QueryProvider>
-          {children}
+          {/* Ruang untuk BottomNav agar konten tidak tertutup di layar kecil */}
+          <div className="pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
+            {children}
+          </div>
+          <BottomNav />
           <Toaster richColors position="top-right" />
         </QueryProvider>
       </body>

@@ -21,7 +21,7 @@ const pickerIcon = L.divIcon({
     <div style="
       width: 30px;
       height: 30px;
-      background-color: hsl(var(--primary));
+      background-color: var(--primary);
       border: 3px solid white;
       border-radius: 50%;
       box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);

@@ -71,7 +71,7 @@ export default function ReportCard({ report }: ReportCardProps) {
             <div className="flex items-center gap-3">
               <span className="flex items-center gap-1">
                 <ThumbsUp className="h-3 w-3" />
-                {report.vote_count}
+                {report.vote_count ?? 0}
               </span>
               <span className="flex items-center gap-1">
                 <MapPin className="h-3 w-3" />
@@ -80,11 +80,13 @@ export default function ReportCard({ report }: ReportCardProps) {
             </div>
             <span className="flex items-center gap-1">
               <Calendar className="h-3 w-3" />
-              {new Date(report.created_at).toLocaleDateString("id-ID", {
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-              })}
+              {report.created_at
+                ? new Date(report.created_at).toLocaleDateString("id-ID", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })
+                : "-"}
             </span>
           </div>
         </CardContent>
