@@ -1,21 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
-import Link from "next/link";
-import { ChevronRight } from "lucide-react";
-import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
+import { MapContainer, Marker, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet.heat";
 
 import { OPENSTREETMAP_ATTRIBUTION, OPENSTREETMAP_TILE_URL } from "@/lib/constants/map";
-import {
-  CATEGORY_COLORS,
-  CATEGORY_LABELS,
-  STATUS_BADGE_VARIANTS,
-  STATUS_LABELS,
-} from "@/lib/constants/reports";
 import type { Report } from "@/lib/types";
-import { Badge } from "@/components/ui/badge";
 
 interface MapComponentProps {
   reports: Report[];
@@ -128,34 +119,50 @@ function MapViewController({
 }
 
 // Helper to create category-colored HTML markers
-function createCustomIcon(category: Report["category"], isSelected: boolean) {
-  const color = CATEGORY_COLORS[category] || "#6b7280";
-  const size = isSelected ? 36 : 28;
+function createCustomIcon(status: Report["status"], isSelected: boolean) {
+  const colorByStatus: Record<Report["status"], string> = {
+    dilaporkan: "#6f797a",
+    diproses: "#8e4e14",
+    selesai: "#01544f",
+  };
+  const color = colorByStatus[status];
+  const size = isSelected ? 42 : 34;
 
   const html = `
-    <div style="
-      width: ${size}px;
-      height: ${size}px;
-      background-color: ${color};
-      border: 3px solid white;
-      border-radius: 50%;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: transform 0.2s ease;
-      ${isSelected ? "transform: scale(1.2); z-index: 999;" : ""}
-    ">
-      <div style="width: 8px; height: 8px; background-color: white; border-radius: 50%;"></div>
+    <div style="position:relative;width:${size}px;height:${size + 8}px;filter:drop-shadow(0 4px 5px rgba(17,28,44,.24));">
+      <div style="
+        position:absolute;
+        left:50%;
+        bottom:3px;
+        width:14px;
+        height:14px;
+        background:${color};
+        transform:translateX(-50%) rotate(45deg);
+        border-radius:2px;
+      "></div>
+      <div style="
+        position:relative;
+        z-index:1;
+        width:${size}px;
+        height:${size}px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        border:3px solid white;
+        border-radius:9999px;
+        background:${color};
+        box-shadow:0 2px 6px rgba(17,28,44,.2);
+      ">
+        <div style="width:${isSelected ? 12 : 9}px;height:${isSelected ? 12 : 9}px;border:2px solid white;border-radius:9999px;"></div>
+      </div>
     </div>
   `;
 
   return L.divIcon({
     html,
     className: "custom-leaflet-marker",
-    iconSize: [size, size],
-    iconAnchor: [size / 2, size / 2],
-    popupAnchor: [0, -size / 2],
+    iconSize: [size, size + 8],
+    iconAnchor: [size / 2, size + 8],
   });
 }
 
@@ -171,10 +178,11 @@ export default function MapComponent({
   const defaultCenter: [number, number] = useMemo(() => center, [center]);
 
   return (
-    <div className="relative h-full w-full overflow-hidden rounded-lg border shadow-sm">
+    <div className="relative h-full w-full overflow-hidden">
       <MapContainer
         center={defaultCenter}
         zoom={zoom}
+        zoomControl={false}
         scrollWheelZoom={true}
         className="h-full w-full z-0"
         style={{ height: "100%", width: "100%" }}
@@ -192,7 +200,7 @@ export default function MapComponent({
         ) : (
           reports.map((report) => {
             const isSelected = report.id === selectedReportId;
-            const icon = createCustomIcon(report.category, isSelected);
+            const icon = createCustomIcon(report.status, isSelected);
 
             return (
               <Marker
@@ -202,55 +210,7 @@ export default function MapComponent({
                 eventHandlers={{
                   click: () => onSelectReport?.(report),
                 }}
-              >
-                <Popup className="sigapkota-popup">
-                  <div className="w-64 space-y-2 p-1">
-                    {report.photo_url && (
-                      <div className="aspect-video w-full overflow-hidden rounded-md bg-muted">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={report.photo_url}
-                          alt={report.title}
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
-                    )}
-
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                        {CATEGORY_LABELS[report.category]}
-                      </Badge>
-                      <Badge
-                        variant={STATUS_BADGE_VARIANTS[report.status]}
-                        className="text-[10px] px-1.5 py-0"
-                      >
-                        {STATUS_LABELS[report.status]}
-                      </Badge>
-                    </div>
-
-                    <h4 className="text-sm font-semibold leading-tight text-foreground line-clamp-2">
-                      {report.title}
-                    </h4>
-
-                    {report.description && (
-                      <p className="text-xs text-muted-foreground line-clamp-2">
-                        {report.description}
-                      </p>
-                    )}
-
-                    <div className="flex items-center justify-between pt-1 text-xs text-muted-foreground border-t">
-                      <span>{report.vote_count ?? 0} Dukungan</span>
-                      <Link
-                        href={`/laporan/${report.id}`}
-                        className="inline-flex h-7 items-center gap-0.5 rounded-md bg-secondary px-2.5 text-xs font-medium text-secondary-foreground transition-colors hover:bg-secondary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      >
-                        Lihat Detail
-                        <ChevronRight className="h-3.5 w-3.5" />
-                      </Link>
-                    </div>
-                  </div>
-                </Popup>
-              </Marker>
+              />
             );
           })
         )}

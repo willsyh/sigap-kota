@@ -1,416 +1,276 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useParams, useRouter } from "next/navigation";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  ArrowLeft,
-  Calendar,
-  MapPin,
-  ThumbsUp,
-  CheckCircle2,
-  Clock,
   AlertTriangle,
+  ArrowLeft,
+  Check,
+  CheckCircle2,
+  Clock3,
+  ImageOff,
   Loader2,
-  History,
+  MapPin,
+  MoveHorizontal,
+  Share2,
+  ThumbsUp,
 } from "lucide-react";
 
-import Navbar from "@/components/Navbar";
 import MapView from "@/components/MapView";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  CATEGORY_LABELS,
-  CATEGORY_COLORS,
-  STATUS_LABELS,
-  STATUS_BADGE_VARIANTS,
-} from "@/lib/constants/reports";
+import { CATEGORY_LABELS, STATUS_LABELS } from "@/lib/constants/reports";
 import { createClient } from "@/lib/supabase/client";
-import type { Report, ReportStatus } from "@/lib/types";
 import type { StatusLogRow } from "@/lib/supabase/types";
+import type { Report, ReportStatus } from "@/lib/types";
 
-const STATUS_ICONS: Record<ReportStatus, typeof Clock> = {
-  dilaporkan: AlertTriangle,
-  diproses: Clock,
-  selesai: CheckCircle2,
-};
-
-const TIMELINE_STEPS: { status: ReportStatus; label: string }[] = [
+const STEPS: { status: ReportStatus; label: string }[] = [
   { status: "dilaporkan", label: "Dilaporkan" },
   { status: "diproses", label: "Diproses" },
   { status: "selesai", label: "Selesai" },
 ];
+
+const statusPill: Record<ReportStatus, string> = {
+  dilaporkan: "border-outline-variant bg-surface-container text-on-surface-variant",
+  diproses: "border-secondary/20 bg-secondary-container/20 text-on-secondary-container",
+  selesai: "border-tertiary/15 bg-tertiary/10 text-tertiary",
+};
+
+function DetailHeader({ title, onShare }: { title: string; onShare?: () => void }) {
+  return (
+    <header className="sticky top-0 z-50 flex h-16 items-center justify-between border-b border-outline-variant/20 bg-surface/96 px-4 shadow-sm backdrop-blur-md">
+      <Link href="/laporan" aria-label="Kembali ke daftar laporan" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-primary transition-colors hover:bg-surface-container focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        <ArrowLeft className="h-6 w-6" />
+      </Link>
+      <h1 className="mx-2 min-w-0 flex-1 truncate text-center font-heading text-lg font-bold text-primary">{title}</h1>
+      <button type="button" onClick={onShare} disabled={!onShare} aria-label="Bagikan laporan" className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-primary transition-colors hover:bg-surface-container focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default disabled:opacity-40">
+        <Share2 className="h-5 w-5" />
+      </button>
+    </header>
+  );
+}
 
 export default function ReportDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
   const reportId = params?.id;
-
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [sliderPosition, setSliderPosition] = useState(50);
+  const [renderTimestamp] = useState(() => Date.now());
 
   useEffect(() => {
-    createClient()
-      .auth.getUser()
-      .then(({ data }) => {
-        setCurrentUserId(data.user?.id ?? null);
-      });
+    createClient().auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
   }, []);
 
-  // Fetch report
-  const {
-    data: report,
-    isLoading: reportLoading,
-    isError: reportError,
-  } = useQuery<Report | null>({
+  const { data: report, isLoading, isError } = useQuery<Report | null>({
     queryKey: ["report", reportId],
     queryFn: async () => {
       if (!reportId) return null;
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from("reports")
-        .select("*")
-        .eq("id", reportId)
-        .maybeSingle();
-
+      const { data, error } = await createClient().from("reports").select("*").eq("id", reportId).maybeSingle();
       if (error) throw error;
       return (data as Report) ?? null;
     },
     enabled: Boolean(reportId),
   });
 
-  // Fetch status logs
   const { data: statusLogs = [] } = useQuery<StatusLogRow[]>({
     queryKey: ["status_logs", reportId],
     queryFn: async () => {
       if (!reportId) return [];
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from("status_logs")
-        .select("*")
-        .eq("report_id", reportId)
-        .order("changed_at", { ascending: true });
-
+      const { data, error } = await createClient().from("status_logs").select("*").eq("report_id", reportId).order("changed_at", { ascending: true });
       if (error) throw error;
       return data ?? [];
     },
     enabled: Boolean(reportId),
   });
 
-  // Check if current user already voted
   const { data: hasVoted = false, refetch: refetchVoted } = useQuery<boolean>({
     queryKey: ["user_voted", reportId, currentUserId],
     queryFn: async () => {
       if (!reportId || !currentUserId) return false;
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from("votes")
-        .select("id")
-        .eq("report_id", reportId)
-        .eq("user_id", currentUserId)
-        .maybeSingle();
-
-      if (error) return false;
+      const { data } = await createClient().from("votes").select("id").eq("report_id", reportId).eq("user_id", currentUserId).maybeSingle();
       return Boolean(data);
     },
     enabled: Boolean(reportId && currentUserId),
   });
 
-  // Vote mutation
   const voteMutation = useMutation({
     mutationFn: async () => {
       if (!currentUserId) {
-        toast.info("Silakan masuk terlebih dahulu untuk mendukung laporan.");
-        router.push(
-          `/auth/login?next=${encodeURIComponent(`/laporan/${reportId}`)}`,
-        );
+        router.push(`/auth/login?next=${encodeURIComponent(`/laporan/${reportId}`)}`);
         throw new Error("UNAUTHORIZED");
       }
-
-      const res = await fetch(`/api/laporan/${reportId}/vote`, {
-        method: "POST",
-      });
-
-      if (res.status === 409) {
-        throw new Error("ALREADY_VOTED");
+      const response = await fetch(`/api/laporan/${reportId}/vote`, { method: "POST" });
+      if (response.status === 409) throw new Error("ALREADY_VOTED");
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.error ?? "Gagal mengirim dukungan");
       }
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => null);
-        throw new Error(err?.error ?? "Gagal mengirim dukungan");
-      }
-
-      return res.json();
+      return response.json();
     },
     onSuccess: () => {
-      toast.success("Terima kasih telah mendukung laporan ini!");
+      toast.success("Terima kasih telah mendukung laporan ini.");
       queryClient.invalidateQueries({ queryKey: ["report", reportId] });
       refetchVoted();
     },
-    onError: (err: Error) => {
-      if (err.message === "ALREADY_VOTED") {
-        toast.info("Kamu sudah mendukung laporan ini");
+    onError: (error: Error) => {
+      if (error.message === "ALREADY_VOTED") {
+        toast.info("Anda sudah mendukung laporan ini.");
         refetchVoted();
-      } else if (err.message !== "UNAUTHORIZED") {
-        toast.error(err.message || "Gagal mendukung laporan");
+      } else if (error.message !== "UNAUTHORIZED") {
+        toast.error(error.message);
       }
     },
   });
 
-  if (reportLoading) {
+  async function handleShare() {
+    const url = window.location.href;
+    if (navigator.share) {
+      await navigator.share({ title: report?.title ?? "Laporan SigapKota", url }).catch(() => undefined);
+      return;
+    }
+    await navigator.clipboard.writeText(url);
+    toast.success("Tautan laporan disalin.");
+  }
+
+  if (isLoading) {
     return (
-      <div className="flex min-h-screen flex-col bg-background">
-        <Navbar />
-        <main className="container flex-1 px-4 py-6 space-y-6">
-          <Skeleton className="h-6 w-24" />
-          <div className="grid gap-6 lg:grid-cols-5">
-            <div className="lg:col-span-3 space-y-4">
-              <Skeleton className="aspect-video w-full rounded-lg" />
-              <Skeleton className="h-8 w-3/4" />
-              <Skeleton className="h-20 w-full" />
-            </div>
-            <div className="lg:col-span-2 space-y-4">
-              <Skeleton className="h-28 w-full rounded-lg" />
-              <Skeleton className="h-44 w-full rounded-lg" />
-              <Skeleton className="h-48 w-full rounded-lg" />
-            </div>
-          </div>
+      <div className="min-h-screen bg-surface">
+        <DetailHeader title="Memuat laporan..." />
+        <main className="mx-auto max-w-3xl space-y-6 px-4 py-5">
+          <Skeleton className="aspect-[4/3] w-full rounded-xl" />
+          <Skeleton className="h-8 w-3/4" />
+          <Skeleton className="h-24 w-full rounded-xl" />
+          <Skeleton className="h-44 w-full rounded-xl" />
         </main>
       </div>
     );
   }
 
-  if (reportError || !report) {
+  if (isError || !report) {
     return (
-      <div className="flex min-h-screen flex-col bg-background">
-        <Navbar />
-        <main className="flex flex-1 flex-col items-center justify-center p-4 text-center">
-          <AlertTriangle className="h-12 w-12 text-muted-foreground mb-3" />
-          <h1 className="text-lg font-semibold">Laporan tidak ditemukan</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            ID laporan tidak valid atau sudah dihapus.
-          </p>
-          <Link href="/laporan">
-            <Button variant="outline" size="sm" className="mt-4">
-              Kembali ke daftar
-            </Button>
-          </Link>
+      <div className="min-h-screen bg-surface">
+        <DetailHeader title="Laporan" />
+        <main className="flex min-h-[70vh] flex-col items-center justify-center px-4 text-center">
+          <AlertTriangle className="mb-3 h-12 w-12 text-outline" />
+          <h1 className="font-heading text-xl font-semibold">Laporan tidak ditemukan</h1>
+          <p className="mt-1 text-sm text-outline">ID laporan tidak valid atau sudah dihapus.</p>
+          <Link href="/laporan" className="mt-4"><Button variant="outline">Kembali ke daftar</Button></Link>
         </main>
       </div>
     );
   }
 
-  const currentStepIdx = TIMELINE_STEPS.findIndex((s) => s.status === report.status);
+  const currentStep = STEPS.findIndex((step) => step.status === report.status);
+  const activity = [...statusLogs].reverse();
+  const reportedDate = new Date(report.created_at);
+  const daysAgo = Math.max(0, Math.floor((renderTimestamp - reportedDate.getTime()) / 86_400_000));
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <Navbar />
-
-      <main className="container flex-1 px-4 py-6 space-y-6">
-        {/* Back */}
-        <Link
-          href="/laporan"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Kembali
-        </Link>
-
-        <div className="grid gap-6 lg:grid-cols-5">
-          {/* Left column: image + info */}
-          <div className="lg:col-span-3 space-y-4">
-            {/* Photo */}
-            {report.photo_url && (
-              <div className="aspect-video w-full overflow-hidden rounded-lg bg-muted">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={report.photo_url}
-                  alt={report.title}
-                  className="h-full w-full object-cover"
-                />
-              </div>
-            )}
-
-            {/* Title + badges */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                <Badge
-                  variant="outline"
-                  className="text-xs"
-                  style={{
-                    borderColor: CATEGORY_COLORS[report.category],
-                    color: CATEGORY_COLORS[report.category],
-                  }}
-                >
-                  {CATEGORY_LABELS[report.category]}
-                </Badge>
-                <Badge
-                  variant={STATUS_BADGE_VARIANTS[report.status]}
-                  className="text-xs"
-                >
-                  {STATUS_LABELS[report.status]}
-                </Badge>
-              </div>
-              <h1 className="text-xl font-bold tracking-tight sm:text-2xl">
-                {report.title}
-              </h1>
-            </div>
-
-            {/* Description */}
-            {report.description && (
-              <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
-                {report.description}
-              </p>
-            )}
-
-            {/* Meta row */}
-            <div className="flex items-center gap-4 text-xs text-muted-foreground border-t pt-3">
-              <span className="flex items-center gap-1">
-                <Calendar className="h-3.5 w-3.5" />
-                {new Date(report.created_at).toLocaleDateString("id-ID", {
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                })}
-              </span>
-              <span className="flex items-center gap-1">
-                <MapPin className="h-3.5 w-3.5" />
-                {report.latitude.toFixed(5)}, {report.longitude.toFixed(5)}
-              </span>
-            </div>
-          </div>
-
-          {/* Right column: vote, timeline, logs, mini map */}
-          <div className="lg:col-span-2 space-y-4">
-            {/* Vote card */}
-            <Card>
-              <CardHeader className="p-4 pb-2">
-                <CardTitle className="text-sm">Dukungan Warga</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-0 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <ThumbsUp className="h-5 w-5 text-primary" />
-                  <span className="text-2xl font-bold">{report.vote_count ?? 0}</span>
-                  <span className="text-xs text-muted-foreground">suara</span>
-                </div>
-                <Button
-                  size="sm"
-                  className="gap-1"
-                  onClick={() => voteMutation.mutate()}
-                  disabled={hasVoted || voteMutation.isPending}
-                  variant={hasVoted ? "secondary" : "default"}
-                >
-                  {voteMutation.isPending ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <ThumbsUp className="h-3.5 w-3.5" />
-                  )}
-                  {hasVoted ? "Didukung" : "Dukung"}
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Status timeline */}
-            <Card>
-              <CardHeader className="p-4 pb-2">
-                <CardTitle className="text-sm">Status Penanganan</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-0 space-y-4">
-                <ol className="space-y-3">
-                  {TIMELINE_STEPS.map((step, idx) => {
-                    const isCompleted = idx <= currentStepIdx;
-                    const isCurrent = idx === currentStepIdx;
-                    const Icon = STATUS_ICONS[step.status];
-                    return (
-                      <li key={step.status} className="flex items-center gap-3">
-                        <div
-                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 ${
-                            isCompleted
-                              ? "border-primary bg-primary text-primary-foreground"
-                              : "border-muted bg-muted/30 text-muted-foreground"
-                          }`}
-                        >
-                          <Icon className="h-4 w-4" />
-                        </div>
-                        <div>
-                          <p
-                            className={`text-sm font-medium ${
-                              isCompleted ? "text-foreground" : "text-muted-foreground"
-                            }`}
-                          >
-                            {step.label}
-                          </p>
-                          {isCurrent && (
-                            <p className="text-[11px] text-muted-foreground">Status saat ini</p>
-                          )}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ol>
-
-                {/* Activity logs jika ada */}
-                {statusLogs.length > 0 && (
-                  <div className="border-t pt-3 space-y-2">
-                    <div className="flex items-center gap-1 text-xs font-semibold text-muted-foreground">
-                      <History className="h-3.5 w-3.5" />
-                      <span>Riwayat Pembaruan Status</span>
-                    </div>
-                    <ul className="space-y-1.5 text-xs text-muted-foreground">
-                      {statusLogs.map((log) => (
-                        <li key={log.id} className="flex items-center justify-between">
-                          <span>
-                            {log.old_status
-                              ? `${STATUS_LABELS[log.old_status as ReportStatus] ?? log.old_status} → `
-                              : ""}
-                            <strong className="text-foreground">
-                              {STATUS_LABELS[log.new_status as ReportStatus] ?? log.new_status}
-                            </strong>
-                          </span>
-                          <span className="text-[11px]">
-                            {log.changed_at
-                              ? new Date(log.changed_at).toLocaleDateString("id-ID", {
-                                  day: "numeric",
-                                  month: "short",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })
-                              : ""}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
+    <div className="min-h-screen bg-surface">
+      <DetailHeader title={report.title} onShare={handleShare} />
+      <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 pb-12 pt-5">
+        <section className="relative aspect-[4/3] w-full select-none overflow-hidden rounded-xl bg-surface-container shadow-sm md:aspect-video">
+          {report.photo_url ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={report.photo_url} alt={`Foto sebelum penanganan ${report.title}`} className="absolute inset-0 h-full w-full object-cover" />
+              {report.photo_after_url && (
+                <>
+                  <div className="absolute inset-0 overflow-hidden" style={{ clipPath: `polygon(0 0, ${sliderPosition}% 0, ${sliderPosition}% 100%, 0 100%)` }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={report.photo_after_url} alt={`Foto setelah penanganan ${report.title}`} className="absolute inset-0 h-full w-full object-cover" />
+                    <span className="absolute left-4 top-4 rounded-full bg-black/60 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur">Sesudah</span>
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                  <span className="absolute right-4 top-4 rounded-full bg-black/60 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur">Sebelum</span>
+                  <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 z-10 w-1 -translate-x-1/2 bg-white shadow-lg" style={{ left: `${sliderPosition}%` }}>
+                    <span className="absolute left-1/2 top-1/2 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white text-outline shadow-md"><MoveHorizontal className="h-4 w-4" /></span>
+                  </div>
+                  <input type="range" min="0" max="100" value={sliderPosition} onChange={(event) => setSliderPosition(Number(event.target.value))} aria-label="Bandingkan foto sebelum dan sesudah" className="absolute inset-0 z-20 h-full w-full cursor-ew-resize opacity-0" />
+                </>
+              )}
+            </>
+          ) : (
+            <div className="flex h-full items-center justify-center text-outline-variant"><ImageOff className="h-12 w-12" /></div>
+          )}
+        </section>
 
-            {/* Mini map */}
-            <Card>
-              <CardHeader className="p-4 pb-2">
-                <CardTitle className="text-sm">Lokasi</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <div className="h-48 w-full overflow-hidden rounded-md">
-                  <MapView
-                    reports={[report]}
-                    center={[report.latitude, report.longitude]}
-                    zoom={16}
-                  />
-                </div>
-              </CardContent>
-            </Card>
+        <section className="space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${statusPill[report.status]}`}><CheckCircle2 className="h-4 w-4" />{STATUS_LABELS[report.status]}</span>
+            <span className="text-xs text-outline">Dilaporkan {daysAgo === 0 ? "hari ini" : `${daysAgo} hari lalu`}</span>
           </div>
-        </div>
+          <h2 className="font-heading text-[26px] font-bold leading-8 tracking-[-0.02em] text-on-surface sm:text-3xl">{report.title}</h2>
+          <div className="flex flex-wrap gap-2 pt-1">
+            <span className="rounded-lg bg-tertiary/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.08em] text-tertiary">{CATEGORY_LABELS[report.category]}</span>
+            <span className="flex items-center gap-1 rounded-lg bg-surface-container px-3 py-1.5 text-xs text-on-surface-variant"><MapPin className="h-4 w-4" />{report.latitude.toFixed(5)}, {report.longitude.toFixed(5)}</span>
+          </div>
+        </section>
+
+        <section className="relative flex items-start justify-between overflow-hidden rounded-xl border border-surface-highest bg-surface-lowest p-5 shadow-sm">
+          <div className="absolute left-12 right-12 top-9 h-0.5 bg-surface-highest" />
+          {STEPS.map((step, index) => {
+            const completed = index <= currentStep;
+            const current = index === currentStep;
+            return (
+              <div key={step.status} className="relative z-10 flex w-24 flex-col items-center gap-2 bg-surface-lowest px-1 text-center">
+                <span className={`flex h-9 w-9 items-center justify-center rounded-full border-2 ${completed ? "border-primary bg-primary text-primary-foreground" : "border-outline-variant bg-surface text-outline"} ${current ? "ring-4 ring-primary/15" : ""}`}>
+                  {completed ? <Check className="h-4 w-4" /> : <Clock3 className="h-4 w-4" />}
+                </span>
+                <span className={`text-xs ${completed ? "font-medium text-primary" : "text-outline"}`}>{step.label}</span>
+              </div>
+            );
+          })}
+        </section>
+
+        <section className="space-y-2">
+          <h3 className="font-heading text-xl font-semibold">Deskripsi</h3>
+          <div className="rounded-xl border border-surface-highest bg-surface-lowest p-4 text-base leading-6 text-on-surface-variant">
+            {report.description || "Tidak ada deskripsi tambahan untuk laporan ini."}
+          </div>
+        </section>
+
+        <section className="space-y-2">
+          <h3 className="font-heading text-xl font-semibold">Peta Lokasi</h3>
+          <div className="h-48 overflow-hidden rounded-xl border border-surface-highest bg-surface-container shadow-sm">
+            <MapView reports={[report]} center={[report.latitude, report.longitude]} zoom={16} viewMode="marker" />
+          </div>
+        </section>
+
+        <section className="flex items-center gap-4 border-y border-surface-highest py-6">
+          <Button onClick={() => voteMutation.mutate()} disabled={hasVoted || voteMutation.isPending} className="h-12 shrink-0 rounded-full px-6 text-xs font-bold tracking-wider">
+            {voteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ThumbsUp className="h-5 w-5" />}
+            {report.vote_count ?? 0} DUKUNGAN
+          </Button>
+          <p className="max-w-xs text-xs leading-4 text-outline">{hasVoted ? "Anda sudah menandai laporan ini sebagai prioritas." : "Dukung agar laporan ini mendapat prioritas penanganan."}</p>
+        </section>
+
+        <section className="space-y-4 pb-6">
+          <h3 className="font-heading text-xl font-semibold">Log Aktivitas</h3>
+          <div className="relative ml-4 space-y-6 border-l-2 border-surface-highest py-1 pl-6">
+            {activity.length > 0 ? activity.map((log, index) => (
+              <div key={log.id} className="relative">
+                <span className={`absolute -left-[33px] top-1 h-4 w-4 rounded-full border-4 border-surface ${index === 0 ? "bg-primary ring-2 ring-primary/10" : "bg-outline-variant"}`} />
+                <div className={index === 0 ? "rounded-lg border border-surface-highest bg-surface-lowest p-3 shadow-sm" : ""}>
+                  <p className="font-medium text-on-surface">{STATUS_LABELS[log.new_status as ReportStatus] ?? log.new_status}</p>
+                  <p className="mt-1 text-xs text-outline">{log.changed_at ? new Date(log.changed_at).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : ""}</p>
+                </div>
+              </div>
+            )) : (
+              <div className="relative">
+                <span className="absolute -left-[33px] top-1 h-4 w-4 rounded-full border-4 border-surface bg-primary ring-2 ring-primary/10" />
+                <div className="rounded-lg border border-surface-highest bg-surface-lowest p-3 shadow-sm">
+                  <p className="font-medium text-on-surface">{STATUS_LABELS[report.status]}</p>
+                  <p className="mt-1 text-xs text-outline">{reportedDate.toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
       </main>
     </div>
   );

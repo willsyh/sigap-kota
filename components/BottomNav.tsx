@@ -4,11 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  FileText,
+  BarChart3,
+  CirclePlus,
   LogIn,
   LogOut,
-  MapPin,
-  Plus,
+  Map,
   ShieldCheck,
   User,
 } from "lucide-react";
@@ -29,10 +29,10 @@ import { createClient } from "@/lib/supabase/client";
 interface TabItem {
   href: string;
   label: string;
-  icon: typeof MapPin;
+  icon: typeof Map;
   isActive: boolean;
-  emphasized?: boolean;
   opensAccount?: boolean;
+  hasNotification?: boolean;
 }
 
 export default function BottomNav() {
@@ -40,6 +40,12 @@ export default function BottomNav() {
   const router = useRouter();
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [accountOpen, setAccountOpen] = useState(false);
+
+  const taskFocused =
+    pathname.startsWith("/auth") ||
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/laporan/baru") ||
+    (pathname.startsWith("/laporan/") && pathname !== "/laporan");
 
   useEffect(() => {
     const supabase = createClient();
@@ -67,30 +73,27 @@ export default function BottomNav() {
     router.refresh();
   }
 
-  const isAdmin = user?.user_metadata?.role === "admin";
-
   const tabs: TabItem[] = [
     {
       href: "/",
-      label: "Peta",
-      icon: MapPin,
+      label: "Beranda",
+      icon: Map,
       isActive: pathname === "/",
     },
     {
       href: "/laporan",
-      label: "Laporan",
-      icon: FileText,
+      label: "Aktivitas",
+      icon: BarChart3,
       isActive:
         pathname.startsWith("/laporan") && !pathname.startsWith("/laporan/baru"),
     },
     {
       href: "/laporan/baru",
-      label: "Buat",
-      icon: Plus,
-      emphasized: true,
+      label: "Lapor",
+      icon: CirclePlus,
       isActive: pathname.startsWith("/laporan/baru"),
     },
-    ...(isAdmin
+    ...(user?.user_metadata?.role === "admin"
       ? [
           {
             href: "/admin",
@@ -103,57 +106,32 @@ export default function BottomNav() {
     user
       ? {
           href: "",
-          label: "Akun",
+          label: "Profil",
           icon: User,
           isActive: false,
           opensAccount: true,
         }
       : {
           href: "/auth/login",
-          label: "Masuk",
+          label: "Profil",
           icon: LogIn,
           isActive: pathname.startsWith("/auth"),
         },
   ];
 
+  if (taskFocused) return null;
+
+  const elevateReportAction = pathname === "/laporan";
+
   return (
     <nav
       aria-label="Navigasi utama"
-      className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 rounded-t-3xl bg-surface/96 shadow-[0_-6px_24px_rgba(17,28,44,0.09)] backdrop-blur-md md:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      <div className="mx-auto flex h-16 max-w-lg items-stretch">
+      <div className="mx-auto flex h-20 max-w-xl items-stretch px-1">
         {tabs.map((tab) => {
           const Icon = tab.icon;
-
-          if (tab.emphasized) {
-            return (
-              <Link
-                key={tab.href}
-                href={tab.href}
-                aria-current={tab.isActive ? "page" : undefined}
-                className="group relative flex flex-1 flex-col items-center justify-end gap-1 pb-1.5 text-[10px] font-medium"
-              >
-                <span
-                  className={cn(
-                    "absolute -top-5 flex h-12 w-12 items-center justify-center rounded-full shadow-lg transition-all group-active:scale-95",
-                    tab.isActive
-                      ? "bg-secondary text-secondary-foreground ring-2 ring-secondary/40"
-                      : "bg-secondary text-secondary-foreground",
-                  )}
-                >
-                  <Icon className="h-5 w-5" />
-                </span>
-                <span
-                  className={
-                    tab.isActive ? "text-primary font-semibold" : "text-muted-foreground"
-                  }
-                >
-                  {tab.label}
-                </span>
-              </Link>
-            );
-          }
 
           if (tab.opensAccount) {
             return (
@@ -162,13 +140,28 @@ export default function BottomNav() {
                 type="button"
                 aria-haspopup="dialog"
                 onClick={() => setAccountOpen(true)}
-                className="flex flex-1 cursor-pointer flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+                className="flex min-w-0 flex-1 cursor-pointer flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium text-outline transition-colors hover:bg-surface-container/60 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
               >
-                <span className="flex h-7 w-9 items-center justify-center rounded-lg transition-colors">
-                  <Icon className="h-[18px] w-[18px]" />
+                <span className="flex h-8 w-10 items-center justify-center">
+                  <Icon className="h-6 w-6" strokeWidth={2} />
                 </span>
                 {tab.label}
               </button>
+            );
+          }
+
+          if (tab.href === "/laporan/baru" && elevateReportAction) {
+            return (
+              <Link
+                key={tab.href}
+                href={tab.href}
+                className="group relative flex min-w-0 flex-1 flex-col items-center justify-end gap-1 pb-2 text-[11px] font-medium text-outline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+              >
+                <span className="absolute -top-5 flex h-14 w-14 items-center justify-center rounded-full bg-secondary text-secondary-foreground shadow-[0_6px_20px_rgba(142,78,20,0.28)] transition-colors group-hover:bg-secondary/90">
+                  <Icon className="h-7 w-7" strokeWidth={2.2} />
+                </span>
+                {tab.label}
+              </Link>
             );
           }
 
@@ -178,19 +171,19 @@ export default function BottomNav() {
               href={tab.href}
               aria-current={tab.isActive ? "page" : undefined}
               className={cn(
-                "flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[10px] transition-colors",
+                "relative flex min-w-0 flex-1 flex-col items-center justify-center gap-1 py-2 text-[11px] transition-colors hover:bg-surface-container/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
                 tab.isActive
                   ? "font-semibold text-primary"
-                  : "font-medium text-muted-foreground hover:text-foreground",
+                  : "font-medium text-outline hover:text-primary",
               )}
             >
               <span
-                className={cn(
-                  "flex h-7 w-9 items-center justify-center rounded-lg transition-colors",
-                  tab.isActive && "bg-accent",
-                )}
+                className="relative flex h-8 w-10 items-center justify-center"
               >
-                <Icon className="h-[18px] w-[18px]" />
+                <Icon className="h-6 w-6" strokeWidth={tab.isActive ? 2.4 : 2} />
+                {tab.hasNotification && (
+                  <span className="absolute right-1.5 top-0.5 h-2.5 w-2.5 rounded-full border-2 border-surface bg-destructive" />
+                )}
               </span>
               {tab.label}
             </Link>
