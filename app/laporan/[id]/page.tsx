@@ -23,6 +23,8 @@ import {
 import MapView from "@/components/MapView";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -70,14 +72,19 @@ export default function ReportDetailPage() {
   const queryClient = useQueryClient();
   const reportId = params?.id;
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [sliderPosition, setSliderPosition] = useState(50);
   const [renderTimestamp] = useState(() => Date.now());
   const [confirmPending, setConfirmPending] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deletePending, setDeletePending] = useState(false);
+  const [deleteReason, setDeleteReason] = useState("");
 
   useEffect(() => {
-    createClient().auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
+    createClient().auth.getUser().then(({ data }) => {
+      setCurrentUserId(data.user?.id ?? null);
+      setIsAdmin(data.user?.user_metadata?.role === "admin");
+    });
   }, []);
 
   const { data: report, isLoading, isError } = useQuery<Report | null>({
@@ -174,7 +181,11 @@ export default function ReportDetailPage() {
     if (!reportId) return;
     setDeletePending(true);
     try {
-      const response = await fetch(`/api/laporan/${reportId}`, { method: "DELETE" });
+      const response = await fetch(`/api/laporan/${reportId}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: deleteReason.trim() }),
+      });
       if (!response.ok) {
         const payload = await response.json().catch(() => null);
         throw new Error(payload?.error ?? "Gagal menghapus laporan");
@@ -187,6 +198,7 @@ export default function ReportDetailPage() {
     } finally {
       setDeletePending(false);
       setDeleteOpen(false);
+      setDeleteReason("");
     }
   }
 
@@ -339,12 +351,12 @@ export default function ReportDetailPage() {
           <p className="max-w-xs text-xs leading-4 text-outline">{hasVoted ? "Anda sudah menandai laporan ini sebagai prioritas." : "Dukung agar laporan ini mendapat prioritas penanganan."}</p>
         </section>
 
-        {/* Hapus laporan - hanya pemilik */}
-        {report.user_id === currentUserId && (
+        {/* Hapus laporan - pemilik atau admin */}
+        {(report.user_id === currentUserId || isAdmin) && (
           <section className="flex items-center justify-between gap-4 rounded-xl border border-destructive/20 bg-destructive/5 p-4">
             <div>
               <p className="text-sm font-semibold text-on-surface">Hapus laporan ini</p>
-              <p className="mt-0.5 text-xs text-outline">Gunakan jika laporan ini spam atau tidak valid. Tindakan tidak dapat dibatalkan.</p>
+              <p className="mt-0.5 text-xs text-outline">Gunakan jika laporan ini spam atau tidak valid. Alasan wajib diisi dan dicatat dalam log.</p>
             </div>
             <Button variant="destructive" className="h-10 shrink-0 gap-2" onClick={() => setDeleteOpen(true)}>
               <Trash2 className="h-4 w-4" />
@@ -386,11 +398,27 @@ export default function ReportDetailPage() {
               Laporan &ldquo;{report.title}&rdquo; akan dihapus permanen beserta seluruh dukungannya. Penghapusan dicatat dalam log sistem.
             </DialogDescription>
           </DialogHeader>
+
+          <div className="space-y-2">
+            <Label htmlFor="delete-reason" className="text-sm font-medium text-on-surface">
+              Alasan penghapusan <span className="text-destructive">*</span>
+            </Label>
+            <Textarea
+              id="delete-reason"
+              value={deleteReason}
+              onChange={(event) => setDeleteReason(event.target.value)}
+              placeholder="Contoh: laporan spam, duplikat, atau tidak valid"
+              rows={3}
+              maxLength={300}
+              className="resize-none rounded-lg border-outline-variant bg-surface-lowest text-sm focus-visible:border-primary"
+            />
+          </div>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteOpen(false)} disabled={deletePending}>
               Batal
             </Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={deletePending} className="gap-2">
+            <Button variant="destructive" onClick={handleDelete} disabled={deletePending || !deleteReason.trim()} className="gap-2">
               {deletePending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
               Ya, hapus
             </Button>

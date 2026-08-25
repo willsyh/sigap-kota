@@ -142,7 +142,7 @@ export async function PATCH(
 
 // Hapus laporan: pemilik laporan atau admin. Selalu dicatat di deletion_logs.
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
@@ -154,6 +154,22 @@ export async function DELETE(
 
   if (!user) {
     return NextResponse.json({ error: "Tidak terautentikasi" }, { status: 401 });
+  }
+
+  // Alasan penghapusan wajib
+  let reason = "";
+  try {
+    const body = (await request.json()) as { reason?: unknown };
+    if (typeof body?.reason === "string") reason = body.reason.trim();
+  } catch {
+    // body kosong ditolak di validasi bawah
+  }
+
+  if (!reason) {
+    return NextResponse.json(
+      { error: "Alasan penghapusan wajib diisi" },
+      { status: 400 },
+    );
   }
 
   const isAdmin = user.user_metadata?.role === "admin";
@@ -181,6 +197,7 @@ export async function DELETE(
     role: isAdmin ? "admin" : "user",
     title: existing.title,
     category: existing.category,
+    reason,
   });
 
   if (logError) {
