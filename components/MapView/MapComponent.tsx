@@ -55,30 +55,46 @@ function HeatmapLayer({ reports, onSwitchToMarker }: { reports: Report[]; onSwit
     const heatFactory = (L as unknown as { heatLayer?: unknown }).heatLayer;
     if (typeof heatFactory !== "function") return;
 
-    // Bobot tinggi & tetap agar setiap laporan terlihat jelas di semua
-    // level zoom, mirip pin: satu titik pun langsung membentuk blob.
+    // Bobot dasar per laporan; dengan max=4, satu titik (w~0.8) hanya
+    // menyentuh bagian bawah gradient. Warna pekat baru muncul saat
+    // beberapa laporan menumpuk di lokasi yang sama.
     const points: [number, number, number][] = reports.map((r) => [
       r.latitude,
       r.longitude,
-      Math.min(1.0, 0.75 + (r.vote_count || 0) * 0.02),
+      Math.min(1.5, 0.8 + (r.vote_count || 0) * 0.05),
     ]);
 
-    const heatLayer = (L as unknown as { heatLayer: (pts: [number, number, number][], opts: Record<string, unknown>) => L.Layer })
+    type HeatLayerInstance = L.Layer & {
+      setOptions: (opts: Record<string, unknown>) => unknown;
+      redraw: () => void;
+    };
+
+    const heatLayer = (L as unknown as { heatLayer: (pts: [number, number, number][], opts: Record<string, unknown>) => HeatLayerInstance })
       .heatLayer(points, {
-        radius: 100,
-        blur: 40,
-        maxZoom: 17,
-        max: 1.0,
+        radius: 45,
+        blur: 22,
+        maxZoom: Math.min(map.getZoom() + 5, HEATMAP_MAX_ZOOM),
+        minOpacity: 0.35,
+        max: 4.0,
         gradient: {
-          0.2: "#0f766e",
-          0.4: "#14b8a6",
-          0.6: "#f59e0b",
-          0.8: "#ea580c",
+          0.15: "#14b8a6",
+          0.4: "#eab308",
+          0.7: "#f97316",
           1.0: "#dc2626",
         },
       });
 
     heatLayer.addTo(map);
+
+    // Cap falloff moderat: titik tetap terlihat di zoom kota/provinsi,
+    // tapi meredup natural kalau zoom out sejauh dunia/benua.
+    const syncIntensity = () => {
+      heatLayer.setOptions({ maxZoom: Math.min(map.getZoom() + 5, HEATMAP_MAX_ZOOM) });
+      heatLayer.redraw();
+    };
+
+    map.on("zoomend", syncIntensity);
+    map.on("moveend", syncIntensity);
 
     const handleMapClick = (e: L.LeafletMouseEvent) => {
       // Zoom in toward the clicked hotspot, capped so the flight stays
@@ -103,6 +119,8 @@ function HeatmapLayer({ reports, onSwitchToMarker }: { reports: Report[]; onSwit
 
     return () => {
       map.off("click", handleMapClick);
+      map.off("zoomend", syncIntensity);
+      map.off("moveend", syncIntensity);
       map.removeLayer(heatLayer);
     };
   }, [map, reports, onSwitchToMarker]);
