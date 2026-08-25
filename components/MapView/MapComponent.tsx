@@ -1,12 +1,26 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { MapContainer, Marker, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
-import "leaflet.heat";
 
 import { OPENSTREETMAP_ATTRIBUTION, OPENSTREETMAP_TILE_URL } from "@/lib/constants/map";
 import type { Report } from "@/lib/types";
+
+// leaflet.heat menempel plugin ke global window.L, sedangkan build ESM
+// Leaflet tidak membuat global tersebut. Daftarkan sebelum plugin dimuat.
+if (typeof window !== "undefined") {
+  const w = window as unknown as { L?: unknown };
+  if (!w.L) w.L = L;
+}
+
+// Beri tahu komponen saat plugin selesai dimuat agar layer heatmap dirender ulang.
+const heatReadyListeners = new Set<() => void>();
+let heatReady = false;
+void import("leaflet.heat").then(() => {
+  heatReady = true;
+  heatReadyListeners.forEach((notify) => notify());
+});
 
 interface MapComponentProps {
   reports: Report[];
@@ -25,9 +39,21 @@ const HEATMAP_MAX_ZOOM = 16;
 // B08: Heatmap Layer Component using leaflet.heat with click-to-zoom
 function HeatmapLayer({ reports, onSwitchToMarker }: { reports: Report[]; onSwitchToMarker?: () => void }) {
   const map = useMap();
+  const [, forceUpdate] = useState(0);
 
   useEffect(() => {
-    if (!map) return;
+    if (heatReady) return;
+    const notify = () => forceUpdate((n) => n + 1);
+    heatReadyListeners.add(notify);
+    return () => { heatReadyListeners.delete(notify); };
+  }, []);
+
+  useEffect(() => {
+    if (!map || !heatReady) return;
+
+    // Guard jika plugin belum selesai dimuat
+    const heatFactory = (L as unknown as { heatLayer?: unknown }).heatLayer;
+    if (typeof heatFactory !== "function") return;
 
     // Convert reports to [lat, lng, intensity]
     const points: [number, number, number][] = reports.map((r) => [
@@ -36,8 +62,8 @@ function HeatmapLayer({ reports, onSwitchToMarker }: { reports: Report[]; onSwit
       Math.min(1.0, 0.4 + (r.vote_count || 1) * 0.1), // higher votes = higher intensity
     ]);
 
-    // @ts-expect-error leaflet.heat attaches heatLayer to L
-    const heatLayer = L.heatLayer(points, {
+    const heatLayer = (L as unknown as { heatLayer: (pts: [number, number, number][], opts: Record<string, unknown>) => L.Layer })
+      .heatLayer(points, {
       radius: 25,
       blur: 15,
       maxZoom: 17,

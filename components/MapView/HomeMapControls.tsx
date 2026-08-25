@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Filter, Map, RotateCcw, Search, X } from "lucide-react";
+import { Filter, Flame, MapPin, RotateCcw, Search, X } from "lucide-react";
 
 import { CATEGORY_LABELS, REPORT_CATEGORIES, REPORT_STATUSES, STATUS_LABELS } from "@/lib/constants/reports";
 import type { ReportCategory, ReportStatus } from "@/lib/types";
@@ -25,9 +25,8 @@ interface HomeMapControlsProps {
   onReset: () => void;
   viewMode: "marker" | "heatmap";
   onViewModeChange: (mode: "marker" | "heatmap") => void;
-  totalActive: number;
-  totalResolved: number;
   totalResults: number;
+  isAdmin: boolean;
 }
 
 export default function HomeMapControls({
@@ -40,9 +39,8 @@ export default function HomeMapControls({
   onReset,
   viewMode,
   onViewModeChange,
-  totalActive,
-  totalResolved,
   totalResults,
+  isAdmin,
 }: HomeMapControlsProps) {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const hasFilters = selectedCategory !== "all" || selectedStatus !== "all";
@@ -76,37 +74,50 @@ export default function HomeMapControls({
             )}
           </label>
 
-          <Button
-            type="button"
-            variant="outline"
-            aria-expanded={filtersOpen}
-            aria-controls="home-map-filter-panel"
-            onClick={() => setFiltersOpen((open) => !open)}
-            className={cn(
-              "relative h-11 cursor-pointer gap-2 rounded-xl border-outline-variant bg-surface-lowest px-3 text-sm font-medium shadow-none hover:bg-surface-container sm:px-4",
-              filtersOpen && "border-primary bg-primary/5 text-primary",
-            )}
-          >
-            <Filter className="h-4 w-4" />
-            <span>Filter</span>
-            {hasFilters && (
-              <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-surface bg-secondary" />
-            )}
-          </Button>
+          {isAdmin && (
+            <Button
+              type="button"
+              variant="outline"
+              aria-expanded={filtersOpen}
+              aria-controls="home-map-filter-panel"
+              onClick={() => setFiltersOpen((open) => !open)}
+              className={cn(
+                "relative h-11 cursor-pointer gap-2 rounded-xl border-outline-variant bg-surface-lowest px-3 text-sm font-medium shadow-none hover:bg-surface-container sm:px-4",
+                filtersOpen && "border-primary bg-primary/5 text-primary",
+              )}
+            >
+              <Filter className="h-4 w-4" />
+              <span>Filter</span>
+              {hasFilters && (
+                <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-surface bg-secondary" />
+              )}
+            </Button>
+          )}
 
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onViewModeChange(viewMode === "marker" ? "heatmap" : "marker")}
-            aria-label={viewMode === "marker" ? "Tampilkan heatmap" : "Tampilkan pin laporan"}
-            title={viewMode === "marker" ? "Tampilkan heatmap" : "Tampilkan pin laporan"}
-            className="h-11 w-11 shrink-0 cursor-pointer rounded-xl border-outline-variant bg-surface-lowest p-0 text-outline shadow-none hover:border-primary hover:bg-surface-container hover:text-primary"
-          >
-            <Map className="h-5 w-5" />
-          </Button>
+          {/* Segmented control: Heatmap | Pin */}
+          <div className="flex h-11 shrink-0 items-center rounded-xl border border-outline-variant bg-surface-lowest p-1 shadow-none" role="group" aria-label="Mode tampilan peta">
+            <button
+              type="button"
+              onClick={() => onViewModeChange("heatmap")}
+              aria-pressed={viewMode === "heatmap"}
+              className={`flex h-full cursor-pointer items-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${viewMode === "heatmap" ? "bg-primary text-primary-foreground shadow-sm" : "text-on-surface-variant hover:text-primary"}`}
+            >
+              <Flame className="h-4 w-4" />
+              <span className="hidden sm:inline">Heatmap</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onViewModeChange("marker")}
+              aria-pressed={viewMode === "marker"}
+              className={`flex h-full cursor-pointer items-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${viewMode === "marker" ? "bg-primary text-primary-foreground shadow-sm" : "text-on-surface-variant hover:text-primary"}`}
+            >
+              <MapPin className="h-4 w-4" />
+              <span className="hidden sm:inline">Pin</span>
+            </button>
+          </div>
         </div>
 
-        {filtersOpen && (
+        {isAdmin && filtersOpen && (
           <div
             id="home-map-filter-panel"
             className="mx-auto mt-3 grid max-w-3xl gap-3 rounded-2xl border border-outline-variant/70 bg-surface-lowest p-3 shadow-lg sm:grid-cols-[1fr_1fr_auto] sm:items-end"
@@ -167,26 +178,6 @@ export default function HomeMapControls({
             </p>
           </div>
         )}
-      </div>
-
-      <div className="mx-auto mt-3 w-[calc(100%-2rem)] max-w-xl">
-        <div className="pointer-events-auto flex items-center justify-between rounded-full border border-surface-highest bg-surface-highest/90 px-6 py-3 shadow-[0_4px_18px_rgba(0,83,91,0.08)] backdrop-blur-lg">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-outline">
-              Aktif
-            </p>
-            <p className="mt-0.5 text-lg font-semibold leading-none text-primary">{totalActive}</p>
-          </div>
-          <div className="h-9 w-px bg-outline-variant/60" />
-          <div className="text-right">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-outline">
-              Selesai
-            </p>
-            <p className="mt-0.5 text-lg font-semibold leading-none text-tertiary">
-              {totalResolved}
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   );

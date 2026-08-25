@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import Navbar from "@/components/Navbar";
@@ -10,6 +10,7 @@ import {
   CATEGORY_LABELS,
   STATUS_LABELS,
 } from "@/lib/constants/reports";
+import { createClient } from "@/lib/supabase/client";
 import type { Report, ReportCategory, ReportStatus } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -43,8 +44,17 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState<ReportCategory | "all">("all");
   const [selectedStatus, setSelectedStatus] = useState<ReportStatus | "all">("all");
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
-  const [viewMode, setViewMode] = useState<"marker" | "heatmap">("marker");
+  const [viewMode, setViewMode] = useState<"marker" | "heatmap">("heatmap");
   const [query, setQuery] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    createClient().auth.getUser().then(({ data }) => {
+      if (active) setIsAdmin(data.user?.user_metadata?.role === "admin");
+    });
+    return () => { active = false; };
+  }, []);
 
   // Filter reports based on active selection
   const filteredReports = useMemo(() => {
@@ -69,17 +79,8 @@ export default function Home() {
     });
   }, [reports, query, selectedCategory, selectedStatus]);
 
-  const stats = useMemo(() => {
-    return reports.reduce(
-      (result, report) => {
-        if (report.status === "selesai") result.resolved += 1;
-        else result.active += 1;
-
-        return result;
-      },
-      { active: 0, resolved: 0 },
-    );
-  }, [reports]);
+  // Stabilized callbacks: MapView correctness must not depend on the React
+  // compiler memoizing inline closures.
 
   // Stabilized callbacks: MapView correctness must not depend on the React
   // compiler memoizing inline closures.
@@ -128,9 +129,8 @@ export default function Home() {
           onReset={handleResetFilters}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
-          totalActive={stats.active}
-          totalResolved={stats.resolved}
           totalResults={filteredReports.length}
+          isAdmin={isAdmin}
         />
 
         <div className="absolute inset-0 overflow-hidden bg-surface-container">
