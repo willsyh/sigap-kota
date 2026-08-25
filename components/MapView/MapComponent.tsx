@@ -65,8 +65,8 @@ function HeatmapLayer({ reports, onSwitchToMarker }: { reports: Report[]; onSwit
 
     const heatLayer = (L as unknown as { heatLayer: (pts: [number, number, number][], opts: Record<string, unknown>) => L.Layer })
       .heatLayer(points, {
-        radius: 35,
-        blur: 22,
+        radius: 100,
+        blur: 40,
         maxZoom: 17,
         max: 1.0,
         gradient: {
