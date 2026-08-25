@@ -40,10 +40,7 @@ export default function RootLayout({
     >
       <body className="flex min-h-full flex-col">
         <QueryProvider>
-          {/* Ruang untuk BottomNav agar konten tidak tertutup di layar kecil */}
-          <div className="pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
-            {children}
-          </div>
+          <div>{children}</div>
           <BottomNav />
           <Toaster richColors position="top-right" />
         </QueryProvider>

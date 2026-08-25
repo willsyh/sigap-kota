@@ -1,13 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Search, AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, Search, SlidersHorizontal } from "lucide-react";
 
 import Navbar from "@/components/Navbar";
 import ReportCard from "@/components/ReportCard";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
@@ -18,16 +19,17 @@ import {
 } from "@/components/ui/select";
 import {
   CATEGORY_LABELS,
-  STATUS_LABELS,
   REPORT_CATEGORIES,
   REPORT_STATUSES,
+  STATUS_LABELS,
 } from "@/lib/constants/reports";
 import type { Report, ReportCategory, ReportStatus } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 async function fetchReports(): Promise<Report[]> {
-  const res = await fetch("/api/laporan");
-  if (!res.ok) throw new Error("Gagal memuat laporan");
-  return res.json();
+  const response = await fetch("/api/laporan");
+  if (!response.ok) throw new Error("Gagal memuat laporan");
+  return response.json();
 }
 
 export default function LaporanPage() {
@@ -35,22 +37,28 @@ export default function LaporanPage() {
     queryKey: ["reports"],
     queryFn: fetchReports,
   });
-
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<ReportCategory | "all">("all");
   const [status, setStatus] = useState<ReportStatus | "all">("all");
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const filtered = useMemo(() => {
-    return reports.filter((r) => {
-      const matchSearch =
-        search.trim() === "" ||
-        r.title.toLowerCase().includes(search.toLowerCase()) ||
-        r.description?.toLowerCase().includes(search.toLowerCase());
-      const matchCat = category === "all" || r.category === category;
-      const matchStat = status === "all" || r.status === status;
-      return matchSearch && matchCat && matchStat;
+    const normalizedSearch = search.trim().toLocaleLowerCase("id-ID");
+    return reports.filter((report) => {
+      const matchesSearch =
+        !normalizedSearch ||
+        [report.id, report.title, report.description]
+          .filter(Boolean)
+          .join(" ")
+          .toLocaleLowerCase("id-ID")
+          .includes(normalizedSearch);
+      return (
+        matchesSearch &&
+        (category === "all" || report.category === category) &&
+        (status === "all" || report.status === status)
+      );
     });
-  }, [reports, search, category, status]);
+  }, [category, reports, search, status]);
 
   const resetFilters = () => {
     setSearch("");
@@ -58,133 +66,109 @@ export default function LaporanPage() {
     setStatus("all");
   };
 
-  const isFiltered = search.trim() !== "" || category !== "all" || status !== "all";
+  const chipClass = (active: boolean) =>
+    cn(
+      "flex h-9 shrink-0 cursor-pointer items-center rounded-full border px-4 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+      active
+        ? "border-primary bg-primary text-primary-foreground shadow-sm"
+        : "border-outline-variant bg-surface-lowest text-on-surface-variant hover:bg-surface-container",
+    );
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="min-h-screen bg-surface pb-[calc(6rem+env(safe-area-inset-bottom))]">
       <Navbar />
-
-      <main className="container flex-1 px-4 py-6 space-y-4">
-        <h1 className="text-2xl font-bold tracking-tight">Daftar Laporan</h1>
-
-        {/* Filter bar */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative min-w-0 flex-1 sm:max-w-xs">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Cari judul atau deskripsi..."
-              className="h-9 pl-9 text-sm"
-            />
+      <main className="mx-auto w-full max-w-4xl px-4">
+        <section className="sticky top-16 z-30 bg-surface/96 pb-3 pt-4 backdrop-blur-md">
+          <div className="mb-4 flex rounded-xl bg-surface-high p-1 shadow-sm">
+            <Link href="/" className="flex h-10 flex-1 items-center justify-center rounded-lg text-xs font-semibold text-on-surface-variant transition-colors hover:bg-surface-container">
+              Tampilan Peta
+            </Link>
+            <div className="flex h-10 flex-1 items-center justify-center rounded-lg bg-surface-lowest text-xs font-semibold text-primary shadow-sm">
+              Tampilan Daftar
+            </div>
           </div>
 
-          <Select
-            value={category}
-            onValueChange={(v) => setCategory(v as ReportCategory | "all")}
-          >
-            <SelectTrigger className="h-9 w-[160px] text-xs">
-              <SelectValue placeholder="Kategori" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Semua Kategori</SelectItem>
-              {REPORT_CATEGORIES.map((c) => (
-                <SelectItem key={c} value={c}>
-                  {CATEGORY_LABELS[c]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="no-scrollbar flex items-center gap-2 overflow-x-auto pb-1">
+            <button type="button" onClick={resetFilters} className={chipClass(category === "all" && status === "all" && !search)}>
+              Semua Laporan
+            </button>
+            <button type="button" onClick={() => setCategory(category === "jalan_rusak" ? "all" : "jalan_rusak")} className={chipClass(category === "jalan_rusak")}>
+              Jalan Rusak
+            </button>
+            <button type="button" onClick={() => setStatus(status === "diproses" ? "all" : "diproses")} className={chipClass(status === "diproses")}>
+              Sedang Diproses
+            </button>
+            <button type="button" onClick={() => setCategory(category === "fasilitas_umum" ? "all" : "fasilitas_umum")} className={chipClass(category === "fasilitas_umum")}>
+              Fasilitas Umum
+            </button>
+            <button
+              type="button"
+              aria-label="Buka filter lengkap"
+              aria-expanded={advancedOpen}
+              onClick={() => setAdvancedOpen((open) => !open)}
+              className={cn("flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-outline-variant bg-surface-lowest text-on-surface-variant transition-colors hover:bg-surface-container focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", advancedOpen && "border-primary text-primary")}
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+            </button>
+          </div>
 
-          <Select
-            value={status}
-            onValueChange={(v) => setStatus(v as ReportStatus | "all")}
-          >
-            <SelectTrigger className="h-9 w-[140px] text-xs">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Semua Status</SelectItem>
-              {REPORT_STATUSES.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {STATUS_LABELS[s]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {advancedOpen && (
+            <div className="mt-3 grid gap-2 rounded-xl border border-outline-variant/40 bg-surface-lowest p-3 shadow-lg sm:grid-cols-[1fr_180px_160px_auto]">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-outline" />
+                <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari judul atau ID..." className="h-11 pl-9" />
+              </div>
+              <Select value={category} onValueChange={(value) => setCategory(value as ReportCategory | "all")}>
+                <SelectTrigger className="h-11 w-full"><SelectValue placeholder="Kategori" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua kategori</SelectItem>
+                  {REPORT_CATEGORIES.map((item) => <SelectItem key={item} value={item}>{CATEGORY_LABELS[item]}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={status} onValueChange={(value) => setStatus(value as ReportStatus | "all")}>
+                <SelectTrigger className="h-11 w-full"><SelectValue placeholder="Status" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua status</SelectItem>
+                  {REPORT_STATUSES.map((item) => <SelectItem key={item} value={item}>{STATUS_LABELS[item]}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Button type="button" variant="ghost" onClick={resetFilters} className="h-11">Reset</Button>
+            </div>
+          )}
+        </section>
 
-          {isFiltered && (
-            <Button variant="ghost" size="sm" onClick={resetFilters} className="h-9 text-xs">
-              Reset
-            </Button>
+        <section className="space-y-4 pb-8">
+          {isLoading && Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="flex gap-4 rounded-xl border border-outline-variant/30 bg-surface-lowest p-3">
+              <Skeleton className="h-24 w-24 shrink-0 rounded-lg" />
+              <div className="flex-1 space-y-3 py-1"><Skeleton className="h-4 w-28" /><Skeleton className="h-5 w-3/4" /><Skeleton className="h-4 w-1/2" /></div>
+            </div>
+          ))}
+
+          {!isLoading && isError && (
+            <div className="flex flex-col items-center py-20 text-center">
+              <AlertCircle className="mb-3 h-10 w-10 text-destructive" />
+              <h2 className="font-heading text-lg font-semibold">Gagal memuat laporan</h2>
+              <p className="mt-1 text-sm text-outline">Periksa koneksi, lalu coba kembali.</p>
+              <Button variant="outline" className="mt-4" onClick={() => refetch()}>Coba lagi</Button>
+            </div>
           )}
 
-          <span className="ml-auto text-xs text-muted-foreground">
-            {isLoading ? (
-              <span className="inline-flex items-center gap-1">
-                <Loader2 className="h-3 w-3 animate-spin" /> Memuat...
-              </span>
-            ) : (
-              `${filtered.length} laporan`
-            )}
-          </span>
-        </div>
+          {!isLoading && !isError && filtered.map((report) => <ReportCard key={report.id} report={report} />)}
 
-        {/* Loading state */}
-        {isLoading && (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="space-y-3 rounded-lg border p-4">
-                <Skeleton className="aspect-video w-full rounded-md" />
-                <div className="flex gap-2">
-                  <Skeleton className="h-5 w-20" />
-                  <Skeleton className="h-5 w-16" />
-                </div>
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-3 w-full" />
-              </div>
-            ))}
-          </div>
-        )}
+          {!isLoading && !isError && filtered.length === 0 && (
+            <div className="flex flex-col items-center py-20 text-center">
+              <AlertCircle className="mb-3 h-10 w-10 text-outline-variant" />
+              <h2 className="font-heading text-lg font-semibold">Laporan tidak ditemukan</h2>
+              <p className="mt-1 max-w-xs text-sm text-outline">Tidak ada laporan yang sesuai dengan filter saat ini.</p>
+              <Button variant="outline" className="mt-4" onClick={resetFilters}>Reset filter</Button>
+            </div>
+          )}
 
-        {/* Error state */}
-        {!isLoading && isError && (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <AlertCircle className="h-10 w-10 text-destructive mb-3" />
-            <h3 className="text-base font-semibold">Gagal memuat laporan</h3>
-            <p className="text-xs text-muted-foreground mt-1 max-w-sm">
-              Terjadi kesalahan saat menghubungi server. Silakan coba lagi.
-            </p>
-            <Button variant="outline" size="sm" className="mt-4" onClick={() => refetch()}>
-              Coba Lagi
-            </Button>
-          </div>
-        )}
-
-        {/* Report grid */}
-        {!isLoading && !isError && filtered.length > 0 && (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((report) => (
-              <ReportCard key={report.id} report={report} />
-            ))}
-          </div>
-        )}
-
-        {/* Empty state */}
-        {!isLoading && !isError && filtered.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <AlertCircle className="h-10 w-10 text-muted-foreground mb-3" />
-            <h3 className="text-base font-semibold">Tidak ada laporan ditemukan</h3>
-            <p className="text-xs text-muted-foreground mt-1 max-w-sm">
-              Coba ubah kata kunci pencarian atau reset filter.
-            </p>
-            {isFiltered && (
-              <Button variant="outline" size="sm" className="mt-4" onClick={resetFilters}>
-                Reset Filter
-              </Button>
-            )}
-          </div>
-        )}
+          {!isLoading && !isError && filtered.length > 0 && (
+            <p className="pt-2 text-center text-xs text-outline">Menampilkan {filtered.length} laporan</p>
+          )}
+        </section>
       </main>
     </div>
   );

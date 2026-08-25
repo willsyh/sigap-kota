@@ -1,31 +1,35 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  BarChart3,
-  FileText,
-  Search,
   AlertCircle,
-  ClipboardList,
+  BarChart3,
   CheckCircle2,
-  Clock,
-  AlertTriangle,
+  ClipboardClock,
+  Download,
+  FileText,
+  ImageOff,
+  LayoutDashboard,
+  Layers3,
   Loader2,
   Lock,
-  TrendingUp,
-  LineChart,
+  MapPin,
+  Menu,
+  RefreshCw,
+  Search,
+  Settings,
+  SlidersHorizontal,
+  ThumbsUp,
+  UserRound,
 } from "lucide-react";
 
-import Navbar from "@/components/Navbar";
-import { Badge } from "@/components/ui/badge";
+import CivicBrandMark from "@/components/CivicBrandMark";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { createClient } from "@/lib/supabase/client";
 import {
   Select,
   SelectContent,
@@ -34,623 +38,243 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
   CATEGORY_LABELS,
-  CATEGORY_COLORS,
-  STATUS_LABELS,
   REPORT_CATEGORIES,
   REPORT_STATUSES,
+  STATUS_LABELS,
 } from "@/lib/constants/reports";
+import { createClient } from "@/lib/supabase/client";
 import type { Report, ReportCategory, ReportStatus } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
-async function fetchAdminReports(): Promise<Report[]> {
-  const res = await fetch("/api/laporan");
-  if (!res.ok) throw new Error("Gagal memuat laporan admin");
-  return res.json();
+type AdminAccess = "loading" | "allowed" | "denied";
+type AdminSection = "overview" | "reports" | "analytics" | "settings";
+
+async function fetchReports(): Promise<Report[]> {
+  const response = await fetch("/api/laporan");
+  if (!response.ok) throw new Error("Gagal memuat laporan admin");
+  return response.json();
 }
 
-// ============ Overview stats ============
-function OverviewTab({ reports }: { reports: Report[] }) {
+export default function AdminPage() {
+  const queryClient = useQueryClient();
+  const [access, setAccess] = useState<AdminAccess>("loading");
+  const [adminEmail, setAdminEmail] = useState("");
+  const [section, setSection] = useState<AdminSection>("reports");
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState<ReportCategory | "all">("all");
+  const [status, setStatus] = useState<ReportStatus | "all">("all");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    createClient().auth.getUser().then(({ data }) => {
+      if (!active) return;
+      const allowed = data.user?.user_metadata?.role === "admin";
+      setAccess(allowed ? "allowed" : "denied");
+      setAdminEmail(data.user?.email ?? "Admin SigapKota");
+    });
+    return () => { active = false; };
+  }, []);
+
+  const { data: reports = [], isLoading, isError, refetch } = useQuery<Report[]>({
+    queryKey: ["admin_reports"],
+    queryFn: fetchReports,
+    enabled: access === "allowed",
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: async ({ id, nextStatus }: { id: string; nextStatus: ReportStatus }) => {
+      const response = await fetch(`/api/laporan/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.error ?? "Gagal memperbarui status");
+      }
+      return response.json();
+    },
+    onMutate: ({ id }) => setUpdatingId(id),
+    onSuccess: () => {
+      toast.success("Status laporan diperbarui.");
+      queryClient.invalidateQueries({ queryKey: ["admin_reports"] });
+      queryClient.invalidateQueries({ queryKey: ["reports"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+    onSettled: () => setUpdatingId(null),
+  });
+
   const stats = useMemo(() => {
-    const byStatus: Record<ReportStatus, number> = {
-      dilaporkan: 0,
-      diproses: 0,
-      selesai: 0,
-    };
-    const byCategory: Record<ReportCategory, number> = {
-      jalan_rusak: 0,
-      sampah: 0,
-      banjir: 0,
-      fasilitas_umum: 0,
-      lainnya: 0,
-    };
-    for (const r of reports) {
-      byStatus[r.status] = (byStatus[r.status] ?? 0) + 1;
-      byCategory[r.category] = (byCategory[r.category] ?? 0) + 1;
+    const byStatus: Record<ReportStatus, number> = { dilaporkan: 0, diproses: 0, selesai: 0 };
+    const byCategory: Record<ReportCategory, number> = { jalan_rusak: 0, sampah: 0, banjir: 0, fasilitas_umum: 0, lainnya: 0 };
+    for (const report of reports) {
+      byStatus[report.status] += 1;
+      byCategory[report.category] += 1;
     }
     return { total: reports.length, byStatus, byCategory };
   }, [reports]);
 
-  const statusCards: {
-    status: ReportStatus;
-    label: string;
-    icon: typeof Clock;
-    color: string;
-  }[] = [
-    { status: "dilaporkan", label: "Dilaporkan", icon: AlertTriangle, color: "text-amber-500" },
-    { status: "diproses", label: "Diproses", icon: Clock, color: "text-blue-500" },
-    { status: "selesai", label: "Selesai", icon: CheckCircle2, color: "text-emerald-500" },
+  const filtered = useMemo(() => {
+    const query = search.trim().toLocaleLowerCase("id-ID");
+    return reports.filter((report) => {
+      const matchesQuery = !query || `${report.id} ${report.title}`.toLocaleLowerCase("id-ID").includes(query);
+      return matchesQuery && (category === "all" || report.category === category) && (status === "all" || report.status === status);
+    });
+  }, [category, reports, search, status]);
+
+  const maxCategory = Math.max(...Object.values(stats.byCategory), 1);
+  const priorityReports = reports.filter((report) => report.status !== "selesai" && report.vote_count >= 10);
+
+  function exportReports() {
+    const rows = [
+      ["ID", "Judul", "Kategori", "Status", "Dukungan", "Latitude", "Longitude"],
+      ...filtered.map((report) => [report.id, report.title, CATEGORY_LABELS[report.category], STATUS_LABELS[report.status], report.vote_count, report.latitude, report.longitude]),
+    ];
+    const csv = rows.map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(",")).join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "laporan-sigapkota.csv";
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
+  const navItems: { id: AdminSection; label: string; icon: typeof LayoutDashboard }[] = [
+    { id: "overview", label: "Ringkasan", icon: LayoutDashboard },
+    { id: "reports", label: "Semua Laporan", icon: FileText },
+    { id: "analytics", label: "Analitik", icon: BarChart3 },
+    { id: "settings", label: "Pengaturan", icon: Settings },
   ];
 
-  const recent = useMemo(
-    () =>
-      [...reports]
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        .slice(0, 5),
-    [reports],
-  );
-
   return (
-    <div className="space-y-6">
-      {/* Stat cards */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-xs text-muted-foreground font-medium">Total Laporan</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="flex items-center gap-2">
-              <ClipboardList className="h-5 w-5 text-primary" />
-              <span className="text-3xl font-bold">{stats.total}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {statusCards.map((sc) => {
-          const Icon = sc.icon;
-          return (
-            <Card key={sc.status}>
-              <CardHeader className="p-4 pb-2">
-                <CardTitle className="text-xs text-muted-foreground font-medium">
-                  {sc.label}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <div className="flex items-center gap-2">
-                  <Icon className={`h-5 w-5 ${sc.color}`} />
-                  <span className="text-3xl font-bold">{stats.byStatus[sc.status]}</span>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      {/* Category distribution */}
-      <Card>
-        <CardHeader className="p-4 pb-2">
-          <CardTitle className="text-sm">Distribusi Kategori</CardTitle>
-        </CardHeader>
-        <CardContent className="p-4 pt-2 space-y-2.5">
-          {REPORT_CATEGORIES.map((cat) => {
-            const count = stats.byCategory[cat] ?? 0;
-            const pct = stats.total > 0 ? (count / stats.total) * 100 : 0;
+    <div className="min-h-screen bg-surface">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-outline-variant/30 bg-surface-lowest lg:flex">
+        <div className="flex h-20 items-center gap-3 border-b border-outline-variant/25 px-5">
+          <CivicBrandMark className="h-10 w-10" />
+          <div className="font-heading text-xl font-bold">SigapKota <span className="text-secondary">Admin</span></div>
+        </div>
+        <nav className="flex-1 space-y-2 p-4" aria-label="Navigasi admin">
+          {navItems.map((item) => {
+            const Icon = item.icon;
             return (
-              <div key={cat} className="space-y-1">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-medium">{CATEGORY_LABELS[cat]}</span>
-                  <span className="text-muted-foreground">
-                    {count} ({pct.toFixed(0)}%)
-                  </span>
-                </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full rounded-full transition-all"
-                    style={{
-                      width: `${pct}%`,
-                      backgroundColor: CATEGORY_COLORS[cat],
-                    }}
-                  />
-                </div>
-              </div>
+              <button key={item.id} type="button" onClick={() => setSection(item.id)} className={cn("flex h-12 w-full cursor-pointer items-center gap-3 rounded-xl px-4 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", section === item.id ? "bg-primary/10 text-primary" : "text-on-surface-variant hover:bg-surface-container")}>
+                <Icon className="h-5 w-5" />{item.label}
+              </button>
             );
           })}
-        </CardContent>
-      </Card>
+        </nav>
+        <div className="flex items-center gap-3 border-t border-outline-variant/25 p-5">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground"><UserRound className="h-5 w-5" /></span>
+          <div className="min-w-0"><p className="text-sm font-semibold">Admin</p><p className="truncate text-xs text-outline" title={adminEmail}>{adminEmail || "Administrator"}</p></div>
+        </div>
+      </aside>
 
-      {/* Recent reports */}
-      <Card>
-        <CardHeader className="p-4 pb-2">
-          <CardTitle className="text-sm">Laporan Terbaru</CardTitle>
-        </CardHeader>
-        <CardContent className="p-4 pt-0">
-          {recent.length === 0 ? (
-            <p className="text-xs text-muted-foreground py-4 text-center">Belum ada laporan.</p>
+      <div className="lg:ml-64">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-outline-variant/25 bg-surface/96 px-4 shadow-sm backdrop-blur-md sm:px-6">
+          <div className="flex items-center gap-3">
+            <button type="button" aria-label="Buka navigasi admin" className="flex h-11 w-11 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container lg:hidden"><Menu className="h-5 w-5" /></button>
+            <h1 className="font-heading text-xl font-bold">Manajemen Laporan</h1>
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="relative hidden sm:block">
+              <span className="sr-only">Cari laporan</span>
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-outline" />
+              <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari laporan..." className="h-11 w-72 rounded-xl bg-surface-lowest pl-9" />
+            </label>
+            <Link href="/" aria-label="Buka peta publik" className="flex h-11 w-11 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container hover:text-primary"><Layers3 className="h-5 w-5" /></Link>
+          </div>
+        </header>
+
+        <main className="p-4 sm:p-6 lg:p-8">
+          {access === "loading" || isLoading ? (
+            <div className="space-y-6"><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{Array.from({ length: 4 }).map((_, index) => <Skeleton key={index} className="h-48 rounded-xl" />)}</div><Skeleton className="h-96 rounded-xl" /></div>
+          ) : access === "denied" ? (
+            <div className="mx-auto flex min-h-[70vh] max-w-md flex-col items-center justify-center text-center"><Lock className="mb-4 h-12 w-12 text-outline" /><h2 className="font-heading text-2xl font-semibold">Akses ditolak</h2><p className="mt-2 text-sm text-outline">Halaman ini hanya dapat diakses oleh administrator SigapKota.</p><Link href="/" className="mt-5"><Button variant="outline">Kembali ke beranda</Button></Link></div>
+          ) : isError ? (
+            <div className="flex min-h-[60vh] flex-col items-center justify-center text-center"><AlertCircle className="mb-3 h-11 w-11 text-destructive" /><h2 className="font-heading text-xl font-semibold">Gagal memuat data admin</h2><Button variant="outline" className="mt-4" onClick={() => refetch()}>Coba lagi</Button></div>
+          ) : section === "settings" ? (
+            <div className="rounded-xl border border-outline-variant/30 bg-surface-lowest p-6 shadow-sm"><h2 className="font-heading text-xl font-semibold">Pengaturan</h2><p className="mt-2 text-sm text-outline">Konfigurasi sistem dikelola melalui environment dan dashboard Supabase.</p></div>
           ) : (
-            <ul className="divide-y">
-              {recent.map((r) => (
-                <li key={r.id} className="flex items-center justify-between py-2.5">
-                  <div className="min-w-0 pr-3">
-                    <p className="text-sm font-medium truncate">{r.title}</p>
-                    <p className="text-[11px] text-muted-foreground">
-                      {CATEGORY_LABELS[r.category]} —{" "}
-                      {new Date(r.created_at).toLocaleDateString("id-ID", {
-                        day: "numeric",
-                        month: "short",
-                      })}
-                    </p>
+            <div className="space-y-6">
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                {[
+                  { label: "Total", value: stats.total, note: "Seluruh laporan", icon: FileText, tone: "text-primary bg-surface-highest/80 border-outline-variant/25" },
+                  { label: "Menunggu", value: stats.byStatus.dilaporkan, note: "Perlu ditinjau", icon: ClipboardClock, tone: "text-secondary bg-secondary-container/15 border-secondary/25" },
+                  { label: "Aktif", value: stats.byStatus.diproses, note: "Sedang ditangani", icon: RefreshCw, tone: "text-primary bg-primary/10 border-primary/25" },
+                  { label: "Selesai", value: stats.byStatus.selesai, note: "Ditutup berhasil", icon: CheckCircle2, tone: "text-tertiary bg-tertiary/10 border-tertiary/25" },
+                ].map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <section key={item.label} className={`rounded-xl border bg-surface-lowest p-6 shadow-[0_2px_12px_rgba(0,109,119,0.05)] ${item.tone.split(" ").at(-1)}`}>
+                      <div className="mb-5 flex items-start justify-between"><span className={`flex h-11 w-11 items-center justify-center rounded-full ${item.tone.split(" ").slice(0, 2).join(" ")}`}><Icon className="h-5 w-5" /></span><span className="text-xs font-bold uppercase tracking-wider text-outline">{item.label}</span></div>
+                      <p className="font-heading text-4xl font-bold tracking-tight">{item.value.toLocaleString("id-ID")}</p><p className="mt-2 text-xs text-outline">{item.note}</p>
+                    </section>
+                  );
+                })}
+              </div>
+
+              <div className="grid gap-6 xl:grid-cols-3">
+                <section className="rounded-xl border border-outline-variant/25 bg-surface-lowest p-6 shadow-[0_2px_12px_rgba(0,109,119,0.05)] xl:col-span-2">
+                  <h2 className="font-heading text-xl font-semibold">Laporan berdasarkan kategori</h2>
+                  <div className="mt-8 flex h-56 items-end gap-4 border-b border-outline-variant/35 px-2 pb-4">
+                    {REPORT_CATEGORIES.map((item, index) => {
+                      const colors = ["bg-primary", "bg-secondary", "bg-tertiary", "bg-surface-dim", "bg-outline-variant"];
+                      const value = stats.byCategory[item];
+                      return (
+                        <div key={item} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-2">
+                          <span className="text-xs font-semibold text-outline">{value}</span>
+                          <div className={`w-full max-w-24 rounded-t ${colors[index]}`} style={{ height: `${Math.max(6, (value / maxCategory) * 75)}%` }} />
+                          <span className="w-full truncate text-center text-[10px] text-outline" title={CATEGORY_LABELS[item]}>{CATEGORY_LABELS[item]}</span>
+                        </div>
+                      );
+                    })}
                   </div>
-                  <Badge variant="outline" className="text-[10px] shrink-0">
-                    {STATUS_LABELS[r.status]}
-                  </Badge>
-                </li>
-              ))}
-            </ul>
+                </section>
+
+                <section className="flex flex-col justify-between overflow-hidden rounded-xl bg-primary p-6 text-primary-foreground shadow-lg">
+                  <div><h2 className="font-heading text-2xl font-semibold">Perlu Perhatian</h2><p className="mt-2 text-sm leading-5 text-primary-foreground/75">Ada {priorityReports.length} laporan prioritas tinggi yang menunggu penanganan.</p><div className="mt-6 space-y-3"><div className="flex items-center justify-between rounded-lg bg-black/10 p-3 text-sm font-semibold"><span>Laporan kritis</span><span className="rounded-full bg-destructive px-2 py-1 text-xs text-white">{priorityReports.filter((item) => item.vote_count >= 25).length}</span></div><div className="flex items-center justify-between rounded-lg bg-black/10 p-3 text-sm font-semibold"><span>Antrean aktif</span><span className="rounded-full bg-secondary px-2 py-1 text-xs text-white">{priorityReports.length}</span></div></div></div>
+                  <button type="button" onClick={() => { setStatus("dilaporkan"); setSection("reports"); }} className="mt-7 h-12 cursor-pointer rounded-lg bg-white font-semibold text-primary transition-colors hover:bg-surface">Tinjau antrean prioritas</button>
+                </section>
+              </div>
+
+              <section className="overflow-hidden rounded-xl border border-outline-variant/25 bg-surface-lowest shadow-[0_2px_12px_rgba(0,109,119,0.05)]">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant/30 p-5 sm:p-6"><h2 className="font-heading text-xl font-semibold">Direktori laporan aktif</h2><div className="flex gap-2"><Button variant="outline" onClick={() => setFiltersOpen((open) => !open)} className="h-11 gap-2"><SlidersHorizontal className="h-4 w-4" />Filter</Button><Button variant="secondary" onClick={exportReports} className="h-11 gap-2"><Download className="h-4 w-4" />Ekspor</Button></div></div>
+                {filtersOpen && (
+                  <div className="grid gap-3 border-b border-outline-variant/30 bg-surface-low p-4 sm:grid-cols-3">
+                    <div className="relative sm:hidden"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-outline" /><Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari laporan..." className="h-11 pl-9" /></div>
+                    <Select value={category} onValueChange={(value) => setCategory(value as ReportCategory | "all")}><SelectTrigger className="h-11 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Semua kategori</SelectItem>{REPORT_CATEGORIES.map((item) => <SelectItem key={item} value={item}>{CATEGORY_LABELS[item]}</SelectItem>)}</SelectContent></Select>
+                    <Select value={status} onValueChange={(value) => setStatus(value as ReportStatus | "all")}><SelectTrigger className="h-11 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Semua status</SelectItem>{REPORT_STATUSES.map((item) => <SelectItem key={item} value={item}>{STATUS_LABELS[item]}</SelectItem>)}</SelectContent></Select>
+                  </div>
+                )}
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[960px] border-collapse text-left">
+                    <thead><tr className="border-b border-outline-variant/30 bg-surface-low text-xs font-bold uppercase tracking-wider text-outline"><th className="p-4">Foto</th><th className="p-4">Detail laporan</th><th className="p-4">Lokasi</th><th className="p-4">Status</th><th className="p-4 text-center">Dukungan</th><th className="p-4 text-right">Aksi</th></tr></thead>
+                    <tbody className="divide-y divide-outline-variant/25">
+                      {filtered.map((report) => (
+                        <tr key={report.id} className="transition-colors hover:bg-surface-low/70">
+                          <td className="p-4">{report.photo_url ? <div className="h-12 w-12 overflow-hidden rounded-lg border border-outline-variant/20">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={report.photo_url} alt="" className="h-full w-full object-cover" />
+                          </div> : <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-surface-container text-outline"><ImageOff className="h-5 w-5" /></div>}</td>
+                          <td className="max-w-xs p-4"><p className="truncate text-sm font-medium">{report.title}</p><div className="mt-1 flex items-center gap-2"><span className="rounded bg-surface-container px-2 py-0.5 text-[10px] text-on-surface-variant">{CATEGORY_LABELS[report.category]}</span><span className="text-[10px] text-outline">{new Date(report.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}</span></div></td>
+                          <td className="p-4"><p className="text-sm">{report.latitude.toFixed(4)}, {report.longitude.toFixed(4)}</p><p className="mt-1 flex items-center gap-1 text-[10px] text-outline"><MapPin className="h-3 w-3" />Koordinat terverifikasi</p></td>
+                          <td className="p-4"><div className="flex items-center gap-2"><Select value={report.status} disabled={updatingId === report.id} onValueChange={(value) => statusMutation.mutate({ id: report.id, nextStatus: value as ReportStatus })}><SelectTrigger className="h-10 w-40"><SelectValue /></SelectTrigger><SelectContent>{REPORT_STATUSES.map((item) => <SelectItem key={item} value={item}>{STATUS_LABELS[item]}</SelectItem>)}</SelectContent></Select>{updatingId === report.id && <Loader2 className="h-4 w-4 animate-spin text-outline" />}</div></td>
+                          <td className="p-4 text-center"><span className="inline-flex items-center gap-1 text-sm font-semibold"><ThumbsUp className="h-4 w-4 text-secondary" />{report.vote_count ?? 0}</span></td>
+                          <td className="p-4 text-right"><Link href={`/laporan/${report.id}`} className="inline-flex h-10 items-center rounded-lg border border-primary px-3 text-xs font-medium text-primary hover:bg-primary/5">Lihat detail</Link></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="flex items-center justify-between border-t border-outline-variant/30 bg-surface px-5 py-4 text-xs text-outline"><span>Menampilkan {filtered.length} dari {reports.length} laporan</span></div>
+              </section>
+            </div>
           )}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-// ============ B07: Admin Analytics ============
-function AnalyticsTab({ reports }: { reports: Report[] }) {
-  // Reports timeline (by date). Reports arrive sorted created_at DESC,
-  // so buckets must be sorted ascending to read oldest -> newest.
-  const timelineData = useMemo(() => {
-    const counts: Record<string, number> = {};
-    const bucketTime: Record<string, number> = {};
-    for (const r of reports) {
-      const d = new Date(r.created_at);
-      const dateStr = d.toLocaleDateString("id-ID", {
-        month: "short",
-        day: "numeric",
-      });
-      counts[dateStr] = (counts[dateStr] || 0) + 1;
-      bucketTime[dateStr] = Math.min(
-        bucketTime[dateStr] ?? Number.POSITIVE_INFINITY,
-        d.getTime(),
-      );
-    }
-    const entries = Object.entries(counts).sort(
-      (a, b) => bucketTime[a[0]] - bucketTime[b[0]],
-    );
-    const max = Math.max(...entries.map(([, count]) => count), 1);
-    return { entries, max };
-  }, [reports]);
-
-  // Resolution metrics
-  const resolutionMetrics = useMemo(() => {
-    const completed = reports.filter((r) => r.status === "selesai");
-    const avgVotes = (reports.reduce((acc, r) => acc + r.vote_count, 0) / (reports.length || 1)).toFixed(1);
-    const resolutionRate = ((completed.length / (reports.length || 1)) * 100).toFixed(0);
-    return { completedCount: completed.length, avgVotes, resolutionRate };
-  }, [reports]);
-
-  const catStats = useMemo(() => {
-    const counts: Record<ReportCategory, number> = {
-      jalan_rusak: 0,
-      sampah: 0,
-      banjir: 0,
-      fasilitas_umum: 0,
-      lainnya: 0,
-    };
-    for (const r of reports) counts[r.category] = (counts[r.category] ?? 0) + 1;
-    return counts;
-  }, [reports]);
-
-  const statusStats = useMemo(() => {
-    const counts: Record<ReportStatus, number> = {
-      dilaporkan: 0,
-      diproses: 0,
-      selesai: 0,
-    };
-    for (const r of reports) counts[r.status] = (counts[r.status] ?? 0) + 1;
-    return counts;
-  }, [reports]);
-
-  return (
-    <div className="space-y-6">
-      {/* Metric Highlights */}
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Card>
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-xs text-muted-foreground font-medium">Tingkat Penyelesaian</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="flex items-center justify-between">
-              <span className="text-2xl font-bold">{resolutionMetrics.resolutionRate}%</span>
-              <Badge variant="outline" className="text-xs">{resolutionMetrics.completedCount} Selesai</Badge>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-xs text-muted-foreground font-medium">Rata-rata Dukungan</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-primary" />
-              <span className="text-2xl font-bold">{resolutionMetrics.avgVotes}</span>
-              <span className="text-xs text-muted-foreground">vote/laporan</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-xs text-muted-foreground font-medium">Total Volume Laporan</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <span className="text-2xl font-bold">{reports.length}</span>
-          </CardContent>
-        </Card>
+        </main>
       </div>
-
-      {/* Reports Over Time Visual */}
-      <Card>
-        <CardHeader className="p-4 pb-2">
-          <CardTitle className="text-sm">Tren Laporan Masuk</CardTitle>
-        </CardHeader>
-        <CardContent className="p-4 pt-4">
-          <div className="flex items-stretch gap-3 h-40 pt-4 border-b pb-2">
-            {timelineData.entries.map(([date, count]) => {
-              const heightPct = (count / timelineData.max) * 100;
-              return (
-                <div key={date} className="flex-1 flex flex-col items-center gap-1 group relative">
-                  <div className="text-[10px] text-muted-foreground font-medium shrink-0">{count}</div>
-                  <div className="w-full flex-1 flex items-end">
-                    <div
-                      className="w-full bg-primary hover:bg-primary/80 rounded-t transition-all"
-                      style={{ height: `${heightPct}%` }}
-                    />
-                  </div>
-                  <span className="text-[10px] text-muted-foreground truncate w-full text-center">{date}</span>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Category Breakdown */}
-        <Card>
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-sm">Distribusi Per Kategori</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-2 space-y-3">
-            {REPORT_CATEGORIES.map((cat) => {
-              const count = catStats[cat] ?? 0;
-              const pct = reports.length > 0 ? (count / reports.length) * 100 : 0;
-              return (
-                <div key={cat} className="space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <span className="font-medium">{CATEGORY_LABELS[cat]}</span>
-                    <span className="text-muted-foreground">{count} ({pct.toFixed(0)}%)</span>
-                  </div>
-                  <div className="h-2 rounded-full bg-muted overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all"
-                      style={{ width: `${pct}%`, backgroundColor: CATEGORY_COLORS[cat] }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
-
-        {/* Status Breakdown */}
-        <Card>
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-sm">Distribusi Status</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-2 space-y-3">
-            {REPORT_STATUSES.map((stat) => {
-              const count = statusStats[stat] ?? 0;
-              const pct = reports.length > 0 ? (count / reports.length) * 100 : 0;
-              return (
-                <div key={stat} className="space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <span className="font-medium">{STATUS_LABELS[stat]}</span>
-                    <span className="text-muted-foreground">{count} ({pct.toFixed(0)}%)</span>
-                  </div>
-                  <div className="h-2 rounded-full bg-muted overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all bg-primary"
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
-}
-
-// ============ All reports table ============
-function AllReportsTab({ reports }: { reports: Report[] }) {
-  const queryClient = useQueryClient();
-  const [search, setSearch] = useState("");
-  const [catFilter, setCatFilter] = useState<ReportCategory | "all">("all");
-  const [statFilter, setStatFilter] = useState<ReportStatus | "all">("all");
-  const [updatingIds, setUpdatingIds] = useState<Set<string>>(() => new Set());
-
-  const statusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: ReportStatus }) => {
-      const res = await fetch(`/api/laporan/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        throw new Error(data?.error ?? "Gagal memperbarui status");
-      }
-      return res.json();
-    },
-    onMutate: ({ id }) => {
-      setUpdatingIds((prev) => new Set(prev).add(id));
-    },
-    onSuccess: () => {
-      toast.success("Status laporan berhasil diperbarui");
-      queryClient.invalidateQueries({ queryKey: ["admin_reports"] });
-      queryClient.invalidateQueries({ queryKey: ["reports"] });
-    },
-    onError: (err: Error) => {
-      toast.error(err.message || "Gagal mengubah status");
-    },
-    onSettled: (_data, _error, { id }) => {
-      setUpdatingIds((prev) => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
-    },
-  });
-
-  const filtered = useMemo(() => {
-    return reports.filter((r) => {
-      const matchSearch =
-        search.trim() === "" ||
-        r.title.toLowerCase().includes(search.toLowerCase()) ||
-        r.id.toLowerCase().includes(search.toLowerCase());
-      const matchCat = catFilter === "all" || r.category === catFilter;
-      const matchStat = statFilter === "all" || r.status === statFilter;
-      return matchSearch && matchCat && matchStat;
-    });
-  }, [reports, search, catFilter, statFilter]);
-
-  const handleStatusChange = (reportId: string, newStatus: ReportStatus) => {
-    statusMutation.mutate({ id: reportId, status: newStatus });
-  };
-
-  return (
-    <div className="space-y-4">
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-0 flex-1 sm:max-w-xs">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cari judul atau ID..."
-            className="h-9 pl-9 text-sm"
-          />
-        </div>
-        <Select value={catFilter} onValueChange={(v) => setCatFilter(v as ReportCategory | "all")}>
-          <SelectTrigger className="h-9 w-[160px] text-xs">
-            <SelectValue placeholder="Kategori" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Semua Kategori</SelectItem>
-            {REPORT_CATEGORIES.map((c) => (
-              <SelectItem key={c} value={c}>{CATEGORY_LABELS[c]}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={statFilter} onValueChange={(v) => setStatFilter(v as ReportStatus | "all")}>
-          <SelectTrigger className="h-9 w-[140px] text-xs">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Semua Status</SelectItem>
-            {REPORT_STATUSES.map((s) => (
-              <SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <span className="ml-auto text-xs text-muted-foreground">{filtered.length} laporan</span>
-      </div>
-
-      {/* Table */}
-      {filtered.length > 0 ? (
-        <div className="rounded-lg border overflow-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-xs">Judul</TableHead>
-                <TableHead className="text-xs w-[120px]">Kategori</TableHead>
-                <TableHead className="text-xs w-[100px]">Dukungan</TableHead>
-                <TableHead className="text-xs w-[100px]">Tanggal</TableHead>
-                <TableHead className="text-xs w-[160px]">Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((r) => {
-                const isRowUpdating = updatingIds.has(r.id);
-                return (
-                  <TableRow key={r.id}>
-                    <TableCell className="text-sm font-medium max-w-[280px] truncate">
-                      {r.title}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className="text-[10px]"
-                        style={{
-                          borderColor: CATEGORY_COLORS[r.category],
-                          color: CATEGORY_COLORS[r.category],
-                        }}
-                      >
-                        {CATEGORY_LABELS[r.category]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm">{r.vote_count ?? 0}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {new Date(r.created_at).toLocaleDateString("id-ID", {
-                        day: "numeric",
-                        month: "short",
-                      })}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Select
-                          value={r.status}
-                          disabled={isRowUpdating}
-                          onValueChange={(v) => handleStatusChange(r.id, v as ReportStatus)}
-                        >
-                          <SelectTrigger className="h-9 w-[140px] text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {REPORT_STATUSES.map((s) => (
-                              <SelectItem key={s} value={s}>
-                                {STATUS_LABELS[s]}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {isRowUpdating && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
-      ) : (
-        <div className="flex flex-col items-center py-16 text-center">
-          <AlertCircle className="h-10 w-10 text-muted-foreground mb-3" />
-          <h3 className="text-base font-semibold">Tidak ada laporan ditemukan</h3>
-          <p className="text-xs text-muted-foreground mt-1">Coba ubah filter pencarian.</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ============ Main Admin Page ============
-type AdminAccess = "loading" | "allowed" | "denied";
-
-export default function AdminPage() {
-  const router = useRouter();
-  const [access, setAccess] = useState<AdminAccess>("loading");
-  const { data: reports = [], isLoading, isError, refetch } = useQuery<Report[]>({
-    queryKey: ["admin_reports"],
-    queryFn: fetchAdminReports,
-  });
-
-  useEffect(() => {
-    let active = true;
-    createClient()
-      .auth.getUser()
-      .then(({ data }) => {
-        if (!active) return;
-        setAccess(data.user?.user_metadata?.role === "admin" ? "allowed" : "denied");
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const showSkeleton = access === "loading" || isLoading;
-
-  return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <Navbar />
-
-      <main className="container flex-1 px-4 py-6 space-y-4">
-        <h1 className="text-2xl font-bold tracking-tight">Panel Admin</h1>
-
-        {showSkeleton ? (
-          <div className="space-y-4">
-            <Skeleton className="h-9 w-48" />
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-24 w-full" />
-              ))}
-            </div>
-            <Skeleton className="h-64 w-full" />
-          </div>
-        ) : access !== "allowed" ? (
-          <div className="flex flex-col items-center py-20 text-center">
-            <Lock className="h-10 w-10 text-muted-foreground mb-3" />
-            <h3 className="text-base font-semibold">Akses ditolak</h3>
-            <p className="text-xs text-muted-foreground mt-1 max-w-sm">
-              Halaman ini hanya dapat diakses oleh admin atau petugas. Silakan kembali ke peta utama untuk melihat laporan.
-            </p>
-            <Button variant="outline" size="sm" className="mt-4 h-9 px-3" onClick={() => router.push("/")}>
-              Kembali ke Beranda
-            </Button>
-          </div>
-        ) : isError ? (
-          <div className="flex flex-col items-center py-20 text-center">
-            <AlertCircle className="h-10 w-10 text-destructive mb-3" />
-            <h3 className="text-base font-semibold">Gagal memuat data admin</h3>
-            <p className="text-xs text-muted-foreground mt-1">
-              Pastikan kamu memiliki akses admin dan koneksi database aktif.
-            </p>
-            <Button variant="outline" size="sm" className="mt-4 h-9 px-3" onClick={() => refetch()}>
-              Coba Lagi
-            </Button>
-          </div>
-        ) : (
-          <Tabs defaultValue="overview">
-            <TabsList className="h-9">
-              <TabsTrigger value="overview">
-                <BarChart3 className="h-4 w-4 mr-1" />
-                Overview
-              </TabsTrigger>
-              <TabsTrigger value="analytics">
-                <LineChart className="h-4 w-4 mr-1" />
-                Analytics
-              </TabsTrigger>
-              <TabsTrigger value="reports">
-                <FileText className="h-4 w-4 mr-1" />
-                Semua Laporan
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="overview">
-              <OverviewTab reports={reports} />
-            </TabsContent>
-
-            <TabsContent value="analytics">
-              <AnalyticsTab reports={reports} />
-            </TabsContent>
-
-            <TabsContent value="reports">
-              <AllReportsTab reports={reports} />
-            </TabsContent>
-          </Tabs>
-        )}
-      </main>
     </div>
   );
 }

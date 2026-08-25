@@ -5,18 +5,21 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import Navbar from "@/components/Navbar";
 import MapView from "@/components/MapView";
-import MapFilters from "@/components/MapView/MapFilters";
+import HomeMapControls from "@/components/MapView/HomeMapControls";
 import {
   CATEGORY_LABELS,
-  STATUS_BADGE_VARIANTS,
   STATUS_LABELS,
 } from "@/lib/constants/reports";
 import type { Report, ReportCategory, ReportStatus } from "@/lib/types";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ThumbsUp, Calendar, X, AlertCircle, Plus } from "lucide-react";
+import {
+  AlertCircle,
+  CalendarDays,
+  Plus,
+  ThumbsUp,
+  X,
+} from "lucide-react";
 
 async function fetchReports(): Promise<Report[]> {
   const res = await fetch("/api/laporan");
@@ -40,16 +43,43 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState<ReportCategory | "all">("all");
   const [selectedStatus, setSelectedStatus] = useState<ReportStatus | "all">("all");
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
-  const [viewMode, setViewMode] = useState<"marker" | "heatmap">("heatmap");
+  const [viewMode, setViewMode] = useState<"marker" | "heatmap">("marker");
+  const [query, setQuery] = useState("");
 
   // Filter reports based on active selection
   const filteredReports = useMemo(() => {
+    const normalizedQuery = query.trim().toLocaleLowerCase("id-ID");
+
     return reports.filter((report) => {
       const matchCategory = selectedCategory === "all" || report.category === selectedCategory;
       const matchStatus = selectedStatus === "all" || report.status === selectedStatus;
-      return matchCategory && matchStatus;
+      const searchableText = [
+        report.id,
+        report.title,
+        report.description,
+        CATEGORY_LABELS[report.category],
+        STATUS_LABELS[report.status],
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLocaleLowerCase("id-ID");
+      const matchQuery = !normalizedQuery || searchableText.includes(normalizedQuery);
+
+      return matchCategory && matchStatus && matchQuery;
     });
-  }, [reports, selectedCategory, selectedStatus]);
+  }, [reports, query, selectedCategory, selectedStatus]);
+
+  const stats = useMemo(() => {
+    return reports.reduce(
+      (result, report) => {
+        if (report.status === "selesai") result.resolved += 1;
+        else result.active += 1;
+
+        return result;
+      },
+      { active: 0, resolved: 0 },
+    );
+  }, [reports]);
 
   // Stabilized callbacks: MapView correctness must not depend on the React
   // compiler memoizing inline closures.
@@ -66,32 +96,45 @@ export default function Home() {
 
   const handleSwitchToMarker = useCallback(() => setViewMode("marker"), []);
 
-  return (
-    // Mobile: fill exactly the space above the fixed BottomNav by mirroring the
-    // padding RootLayout reserves (pb-[calc(5rem+env(safe-area-inset-bottom))]),
-    // so content + padding sums to 100dvh with no phantom page scroll and the
-    // preview card never hides behind the nav. Desktop keeps full h-screen.
-    <div className="flex h-[calc(100dvh-(5rem+env(safe-area-inset-bottom)))] flex-col bg-background md:h-screen">
-      <Navbar />
+  const visibleSelectedReport =
+    selectedReport && filteredReports.some((report) => report.id === selectedReport.id)
+      ? selectedReport
+      : null;
 
-      <main className="relative flex flex-1 flex-col overflow-hidden p-2 sm:p-4 gap-2 sm:gap-3">
-        {/* Filter controls */}
-        <MapFilters
+  const statusDotClass: Record<ReportStatus, string> = {
+    dilaporkan: "bg-outline",
+    diproses: "bg-secondary",
+    selesai: "bg-tertiary",
+  };
+
+  return (
+    <div className="flex h-[calc(100dvh-(5rem+env(safe-area-inset-bottom)))] flex-col overflow-hidden bg-surface md:h-screen">
+      <Navbar
+        viewMode={viewMode}
+        onViewModeToggle={() =>
+          setViewMode((mode) => (mode === "marker" ? "heatmap" : "marker"))
+        }
+      />
+
+      <main className="relative min-h-0 flex-1 overflow-hidden">
+        <HomeMapControls
+          query={query}
+          onQueryChange={setQuery}
           selectedCategory={selectedCategory}
           selectedStatus={selectedStatus}
           onCategoryChange={setSelectedCategory}
           onStatusChange={setSelectedStatus}
           onReset={handleResetFilters}
-          totalResults={filteredReports.length}
-          totalAll={reports.length}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
+          totalActive={stats.active}
+          totalResolved={stats.resolved}
+          totalResults={filteredReports.length}
         />
 
-        {/* Map Container */}
-        <div className="relative flex-1 w-full overflow-hidden rounded-lg">
+        <div className="absolute inset-0 overflow-hidden bg-surface-container">
           {isLoading ? (
-            <div className="flex h-full w-full items-center justify-center rounded-lg border bg-muted/20">
+            <div className="flex h-full w-full items-center justify-center bg-surface-container">
               <div className="space-y-3 text-center">
                 <Skeleton className="mx-auto h-12 w-12 rounded-full" />
                 <Skeleton className="h-4 w-48" />
@@ -99,7 +142,7 @@ export default function Home() {
               </div>
             </div>
           ) : isError ? (
-            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm p-4 text-center">
+            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-surface/85 p-4 text-center backdrop-blur-sm">
               <AlertCircle className="h-10 w-10 text-destructive mb-2" />
               <h3 className="text-base font-semibold">Gagal Memuat Laporan</h3>
               <p className="text-xs text-muted-foreground max-w-sm mt-1 mb-4">
@@ -109,114 +152,111 @@ export default function Home() {
                 Coba Lagi
               </Button>
             </div>
-          ) : filteredReports.length === 0 ? (
-            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm p-4 text-center">
-              <AlertCircle className="h-10 w-10 text-muted-foreground mb-2" />
-              <h3 className="text-base font-semibold">Tidak Ada Laporan Ditemukan</h3>
-              <p className="text-xs text-muted-foreground max-w-sm mt-1 mb-4">
-                Tidak ada laporan yang sesuai dengan kombinasi filter kategori dan status saat ini.
-              </p>
-              <Button size="sm" variant="outline" onClick={handleResetFilters}>
-                Reset Filter
-              </Button>
-            </div>
           ) : null}
 
           {!isLoading && !isError && (
             <MapView
               reports={filteredReports}
-              selectedReportId={selectedReport?.id}
+              selectedReportId={visibleSelectedReport?.id}
               onSelectReport={handleSelectReport}
               center={
-                selectedReport
-                  ? [selectedReport.latitude, selectedReport.longitude]
+                visibleSelectedReport
+                  ? [visibleSelectedReport.latitude, visibleSelectedReport.longitude]
                   : DEFAULT_CENTER
               }
-              zoom={selectedReport ? SELECTED_REPORT_ZOOM : DEFAULT_ZOOM}
+              zoom={visibleSelectedReport ? SELECTED_REPORT_ZOOM : DEFAULT_ZOOM}
               viewMode={viewMode}
               onSwitchToMarker={handleSwitchToMarker}
             />
           )}
 
-          {/* Floating Action Button: sembunyikan halus saat kartu pratinjau terbuka
-              agar tidak menutupi kartu maupun atribusi peta */}
+          {!isLoading && !isError && filteredReports.length === 0 && (
+            <div className="absolute left-1/2 top-[55%] z-20 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 rounded-2xl border border-outline-variant/60 bg-surface-lowest/95 p-4 text-center shadow-lg backdrop-blur">
+              <p className="text-sm font-semibold text-foreground">Laporan tidak ditemukan</p>
+              <p className="mt-1 text-xs text-outline">
+                Coba kata pencarian lain atau reset filter yang aktif.
+              </p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setQuery("");
+                  handleResetFilters();
+                }}
+                className="mt-2 cursor-pointer text-primary"
+              >
+                Reset pencarian
+              </Button>
+            </div>
+          )}
+
           <Link
             href="/laporan/baru"
             aria-label="Buat Laporan"
-            className={`absolute bottom-24 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-secondary text-secondary-foreground shadow-lg shadow-secondary/30 transition-all duration-200 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:bottom-8 md:right-8 md:h-16 md:w-16 ${
-              selectedReport
-                ? "pointer-events-none translate-y-2 opacity-0"
-                : "opacity-100"
-            }`}
+            className="absolute bottom-5 right-4 z-30 flex h-14 w-14 cursor-pointer items-center justify-center rounded-full bg-secondary text-secondary-foreground shadow-[0_8px_24px_rgba(142,78,20,0.28)] transition-colors duration-200 hover:bg-secondary/90 active:bg-secondary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:bottom-8 md:right-8 md:h-16 md:w-16"
           >
-            <Plus className="h-6 w-6" />
+            <Plus className="h-7 w-7" strokeWidth={2.2} />
           </Link>
 
-          {/* Selected Report Quick Preview Card Overlay */}
-          {selectedReport && (
-            <div className="absolute bottom-4 left-4 right-4 sm:left-auto sm:right-4 z-20 sm:w-96">
-              <Card className="shadow-lg border-2 bg-card/95 backdrop-blur">
-                <CardHeader className="p-3 pb-2 flex flex-row items-start justify-between space-y-0">
-                  <div className="space-y-1 pr-4">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                        {CATEGORY_LABELS[selectedReport.category]}
-                      </Badge>
-                      <Badge
-                        variant={STATUS_BADGE_VARIANTS[selectedReport.status]}
-                        className="text-[10px] px-1.5 py-0"
-                      >
-                        {STATUS_LABELS[selectedReport.status]}
-                      </Badge>
-                    </div>
-                    <CardTitle className="text-sm font-semibold leading-tight line-clamp-1">
-                      {selectedReport.title}
-                    </CardTitle>
+          {visibleSelectedReport && (
+            <div className="absolute bottom-5 left-4 right-[5.25rem] z-30 max-w-md md:bottom-8 md:left-8 md:right-auto md:w-[28rem]">
+              <div className="flex items-center gap-3 rounded-2xl border border-outline-variant/45 bg-surface-lowest/96 p-3 shadow-[0_6px_24px_rgba(0,83,91,0.16)] backdrop-blur-md">
+                {visibleSelectedReport.photo_url ? (
+                  <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-surface-container">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={visibleSelectedReport.photo_url}
+                      alt={visibleSelectedReport.title}
+                      className="h-full w-full object-cover"
+                    />
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Tutup pratinjau"
-                    className="h-6 w-6 rounded-full -mr-1 -mt-1"
-                    onClick={handleClosePreview}
+                ) : (
+                  <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-surface-container text-primary">
+                    <AlertCircle className="h-7 w-7" />
+                  </div>
+                )}
+
+                <div className="min-w-0 flex-1">
+                  <div className="mb-1 flex items-center gap-2 pr-10">
+                    <span className="max-w-[55%] truncate rounded-full bg-tertiary/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.06em] text-tertiary">
+                      {CATEGORY_LABELS[visibleSelectedReport.category]}
+                    </span>
+                    <span className="ml-auto flex shrink-0 items-center gap-1.5 text-[11px] font-medium text-outline">
+                      <span className={`h-2 w-2 rounded-full ${statusDotClass[visibleSelectedReport.status]}`} />
+                      {STATUS_LABELS[visibleSelectedReport.status]}
+                    </span>
+                  </div>
+                  <Link
+                    href={`/laporan/${visibleSelectedReport.id}`}
+                    className="block truncate text-sm font-semibold text-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
-                    <X className="h-3.5 w-3.5" />
-                  </Button>
-                </CardHeader>
-
-                <CardContent className="p-3 pt-0 space-y-2.5">
-                  {selectedReport.photo_url && (
-                    <div className="aspect-video w-full overflow-hidden rounded-md bg-muted">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={selectedReport.photo_url}
-                        alt={selectedReport.title}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                  )}
-
-                  {selectedReport.description && (
-                    <p className="text-xs text-muted-foreground line-clamp-2">
-                      {selectedReport.description}
-                    </p>
-                  )}
-
-                  <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t">
-                    <div className="flex items-center gap-1">
-                      <ThumbsUp className="h-3.5 w-3.5 text-primary" />
-                      <span className="font-medium text-foreground">
-                        {selectedReport.vote_count ?? 0}
-                      </span>{" "}
-                      dukungan
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-3.5 w-3.5" />
-                      <span>{new Date(selectedReport.created_at).toLocaleDateString("id-ID")}</span>
-                    </div>
+                    {visibleSelectedReport.title}
+                  </Link>
+                  <div className="mt-2 flex items-center gap-4 text-[11px] text-outline">
+                    <span className="flex items-center gap-1">
+                      <CalendarDays className="h-3.5 w-3.5" />
+                      {new Date(visibleSelectedReport.created_at).toLocaleDateString("id-ID", {
+                        day: "numeric",
+                        month: "short",
+                      })}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <ThumbsUp className="h-3.5 w-3.5" />
+                      {visibleSelectedReport.vote_count ?? 0} dukungan
+                    </span>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+
+                <button
+                  type="button"
+                  aria-label="Tutup pratinjau"
+                  onClick={handleClosePreview}
+                  className="absolute right-0 top-0 flex h-11 w-11 cursor-pointer items-center justify-center rounded-full text-outline transition-colors hover:bg-surface-container hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           )}
         </div>

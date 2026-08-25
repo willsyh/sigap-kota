@@ -1,30 +1,20 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
-import Navbar from "@/components/Navbar";
+import ConnectivityBanner from "@/components/reports/ConnectivityBanner";
 import ReportForm from "@/components/reports/ReportForm";
 
 export default function NewReportPage() {
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <Navbar />
-
-      <main className="container flex-1 px-4 py-6 space-y-4">
-        <Link
-          href="/laporan"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Kembali
+    <div className="min-h-screen bg-surface">
+      <ConnectivityBanner />
+      <header className="sticky top-0 z-40 flex h-16 items-center border-b border-outline-variant/20 bg-surface/96 px-4 shadow-sm backdrop-blur-md">
+        <Link href="/laporan" aria-label="Kembali ke daftar laporan" className="flex h-11 w-11 items-center justify-center rounded-full text-on-surface transition-colors hover:bg-surface-container focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <ArrowLeft className="h-6 w-6" />
         </Link>
-
-        <div className="space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight">Buat Laporan Baru</h1>
-          <p className="text-sm text-muted-foreground">
-            Laporkan masalah fasilitas umum di sekitarmu agar segera ditangani.
-          </p>
-        </div>
-
+        <h1 className="ml-2 font-heading text-2xl font-bold tracking-tight text-on-surface">Laporkan masalah</h1>
+      </header>
+      <main className="mx-auto w-full max-w-[600px] px-4 pb-8 pt-6">
         <ReportForm />
       </main>
     </div>

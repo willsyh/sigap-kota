@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Check, Copy, Crosshair, ImagePlus, Loader2, MapPin, ThumbsUp, X } from "lucide-react";
+import { Check, CircleDot, Copy, Crosshair, Ellipsis, ImagePlus, Landmark, Loader2, MapPin, ThumbsUp, Trash2, Waves, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,13 +17,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import LocationPickerMapWrapper from "@/components/reports/LocationPickerMapWrapper";
 import {
   CATEGORY_LABELS,
@@ -63,13 +56,17 @@ export default function ReportForm() {
 
   // Duplicate detection: tidak memblokir submit, hanya menyarankan dukungan
   const [candidates, setCandidates] = useState<DuplicateCandidate[]>([]);
-  const [checkingDuplicates, setCheckingDuplicates] = useState(false);
+  const [checkingKey, setCheckingKey] = useState<string | null>(null);
   const [votedIds, setVotedIds] = useState<Set<string>>(new Set());
   const [votingId, setVotingId] = useState<string | null>(null);
   const dismissedKeyRef = useRef<string | null>(null);
   // True setelah user menggeser/mengklik peta secara manual; auto-detect
   // GPS awal tidak boleh menimpa posisi pilihan user.
   const userAdjustedRef = useRef(false);
+  const duplicateKey = category
+    ? buildDuplicateKey(category, coords.lat, coords.lng)
+    : null;
+  const checkingDuplicates = duplicateKey !== null && checkingKey === duplicateKey;
 
   // Auto-detect lokasi user saat halaman dibuka
   function detectLocation() {
@@ -127,32 +124,24 @@ export default function ReportForm() {
     const controller = new AbortController();
     let cancelled = false;
 
-    // Reset di awal setiap run agar spinner tidak tertinggal dari run
-    // sebelumnya yang dibatalkan (cleanup-nya melewati finally).
-    setCheckingDuplicates(false);
-
-    if (!category) {
-      setCandidates([]);
+    if (!category || !duplicateKey) {
       return () => {
         cancelled = true;
         controller.abort();
       };
     }
 
-    const currentKey = buildDuplicateKey(category, coords.lat, coords.lng);
+    const currentKey = duplicateKey;
     if (dismissedKeyRef.current === currentKey) {
-      setCandidates([]);
       return () => {
         cancelled = true;
         controller.abort();
       };
     }
-
-    setCandidates([]);
 
     const timer = setTimeout(async () => {
       try {
-        setCheckingDuplicates(true);
+        setCheckingKey(currentKey);
 
         const res = await fetch("/api/laporan/check-duplicate", {
           method: "POST",
@@ -173,7 +162,7 @@ export default function ReportForm() {
       } catch {
         // AbortError atau kegagalan jaringan: abaikan, jangan blokir form
       } finally {
-        if (!cancelled) setCheckingDuplicates(false);
+        if (!cancelled) setCheckingKey(null);
       }
     }, 600);
 
@@ -182,7 +171,7 @@ export default function ReportForm() {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [category, coords.lat, coords.lng]);
+  }, [category, coords.lat, coords.lng, duplicateKey]);
 
   async function handleSupport(candidateId: string) {
     setVotingId(candidateId);
@@ -308,7 +297,7 @@ export default function ReportForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-6 pb-28">
       {/* Duplicate detection: banner di atas form agar langsung terlihat,
           tidak memblokir submit */}
       {checkingDuplicates && candidates.length === 0 && (
@@ -319,7 +308,7 @@ export default function ReportForm() {
       )}
 
       {candidates.length > 0 && (
-        <Card className="border-secondary/40 bg-secondary/5">
+        <Card className="rounded-xl border-outline-variant/30 bg-surface-container/65 shadow-[0_2px_12px_rgba(0,109,119,0.05)]">
           <CardContent className="space-y-3 p-4">
             <div className="flex items-start gap-2.5">
               <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary/15">
@@ -407,19 +396,19 @@ export default function ReportForm() {
         </Card>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-5">
+      <div className="flex flex-col gap-6">
         {/* Kolom kiri: detail laporan */}
-        <Card className="lg:col-span-3">
-          <CardHeader className="p-4 pb-2">
+        <Card className="border-0 bg-transparent shadow-none">
+          <CardHeader className="hidden p-0">
             <CardTitle className="text-sm">Detail Laporan</CardTitle>
             <CardDescription>
               Jelaskan masalah fasilitas umum yang kamu temukan.
             </CardDescription>
           </CardHeader>
 
-          <CardContent className="space-y-4 p-4 pt-0">
-            <div className="space-y-2">
-              <Label htmlFor="title">Judul *</Label>
+          <CardContent className="flex flex-col gap-6 p-0">
+            <div className="order-3 space-y-2">
+              <Label htmlFor="title" className="text-xs font-bold uppercase tracking-[0.08em]">Judul</Label>
               <Input
                 id="title"
                 value={title}
@@ -427,57 +416,54 @@ export default function ReportForm() {
                 placeholder="Contoh: Jalan berlubang di depan sekolah"
                 required
                 maxLength={120}
+                className="h-12 rounded-lg border-outline-variant bg-surface-lowest text-base shadow-[0_2px_12px_rgba(0,109,119,0.05)]"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="category">Kategori *</Label>
-              <Select
-                value={category}
-                onValueChange={(v) => setCategory(v as ReportCategory)}
-                required
-              >
-                <SelectTrigger id="category" className="w-full">
-                  <SelectValue placeholder="Pilih kategori" />
-                </SelectTrigger>
-                <SelectContent>
-                  {REPORT_CATEGORIES.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {CATEGORY_LABELS[c]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="order-2 space-y-2">
+              <Label className="text-xs font-bold uppercase tracking-[0.08em]">Kategori</Label>
+              <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-2">
+                {REPORT_CATEGORIES.map((item) => {
+                  const Icon = item === "jalan_rusak" ? CircleDot : item === "sampah" ? Trash2 : item === "banjir" ? Waves : item === "fasilitas_umum" ? Landmark : Ellipsis;
+                  const active = category === item;
+                  return (
+                    <button key={item} type="button" onClick={() => setCategory(item)} aria-pressed={active} className={`flex h-11 shrink-0 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${active ? "border-2 border-tertiary bg-tertiary/10 font-semibold text-tertiary" : "border-outline-variant bg-surface text-on-surface-variant hover:bg-surface-container"}`}>
+                      <Icon className="h-4 w-4" />{CATEGORY_LABELS[item]}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="description">Deskripsi</Label>
+            <div className="order-4 space-y-2">
+              <Label htmlFor="description" className="text-xs font-bold uppercase tracking-[0.08em]">Deskripsi</Label>
               <Textarea
                 id="description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Jelaskan kondisi, dampak, dan waktu kejadian..."
-                rows={4}
+                rows={5}
                 maxLength={1000}
+                className="rounded-lg border-outline-variant bg-surface-lowest text-base leading-relaxed shadow-[0_2px_12px_rgba(0,109,119,0.05)]"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="photo">Foto</Label>
+            <div className="order-1 space-y-2">
+              <Label htmlFor="photo" className="text-xs font-bold uppercase tracking-[0.08em]">Foto Bukti</Label>
 
               {photoPreview ? (
-                <div className="relative overflow-hidden rounded-md border">
+                <div className="relative h-28 w-28 overflow-hidden rounded-xl border border-outline-variant/40 shadow-sm">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={photoPreview}
                     alt="Pratinjau foto"
-                    className="aspect-video w-full object-cover"
+                    className="h-full w-full object-cover"
                   />
                   <Button
                     type="button"
                     variant="destructive"
                     size="icon"
-                    className="absolute right-2 top-2 h-7 w-7"
+                    className="absolute right-1 top-1 h-10 w-10 rounded-full"
                     onClick={handleRemovePhoto}
                     aria-label="Hapus foto"
                   >
@@ -488,11 +474,11 @@ export default function ReportForm() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-md border border-dashed text-muted-foreground transition-colors hover:bg-accent/40"
+                  className="flex h-28 w-28 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-outline-variant bg-surface-low text-outline transition-colors hover:bg-surface-container focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <ImagePlus className="h-8 w-8" />
                   <span className="text-xs">
-                    Klik untuk unggah foto (JPEG/PNG/WebP, maks 5MB)
+                    Tambah foto
                   </span>
                 </button>
               )}
@@ -510,19 +496,14 @@ export default function ReportForm() {
         </Card>
 
         {/* Kolom kanan: lokasi */}
-        <Card className="lg:col-span-2">
-          <CardHeader className="flex-row items-start justify-between space-y-0 p-4 pb-2">
-            <div className="space-y-1.5">
-              <CardTitle className="text-sm">Lokasi Kejadian</CardTitle>
-              <CardDescription>
-                Geser marker atau klik peta untuk koreksi posisi.
-              </CardDescription>
-            </div>
+        <Card className="border-0 bg-transparent shadow-none">
+          <CardHeader className="flex-row items-center justify-between space-y-0 p-0 pb-2">
+            <CardTitle className="text-xs font-bold uppercase tracking-[0.08em]">Lokasi</CardTitle>
             <Button
               type="button"
               variant="outline"
               size="sm"
-              className="h-8 gap-1 text-xs"
+              className="h-11 gap-2 rounded-full bg-surface-lowest px-4 text-xs text-primary shadow-md"
               onClick={detectLocation}
               disabled={locating || submitting}
             >
@@ -531,12 +512,12 @@ export default function ReportForm() {
               ) : (
                 <Crosshair className="h-3.5 w-3.5" />
               )}
-              Deteksi
+              Gunakan lokasi saya
             </Button>
           </CardHeader>
 
-          <CardContent className="space-y-3 p-4 pt-0">
-            <div className="relative h-64 w-full sm:h-72">
+          <CardContent className="space-y-3 rounded-xl border border-outline-variant/50 bg-surface-lowest p-1 shadow-[0_2px_12px_rgba(0,109,119,0.05)]">
+            <div className="relative h-52 w-full overflow-hidden rounded-lg">
               <LocationPickerMapWrapper
                 lat={coords.lat}
                 lng={coords.lng}
@@ -559,7 +540,7 @@ export default function ReportForm() {
               )}
             </div>
 
-            <div className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+            <div className="flex min-h-12 items-center justify-between rounded-lg bg-surface-low px-3 py-2 text-xs text-on-surface-variant">
               <span className="flex items-center gap-1.5">
                 <MapPin className="h-3.5 w-3.5" />
                 Posisi final diambil dari marker
@@ -572,16 +553,11 @@ export default function ReportForm() {
         </Card>
       </div>
 
-      <div className="flex items-center gap-3">
-        <Button type="submit" disabled={submitting || locating}>
+      <div className="fixed inset-x-0 bottom-0 z-50 rounded-t-2xl border-t border-outline-variant/20 bg-surface/96 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-[0_-6px_24px_rgba(17,28,44,0.09)] backdrop-blur-md">
+        <Button type="submit" disabled={submitting || locating} className="mx-auto flex h-12 w-full max-w-[568px] rounded-lg font-heading text-lg font-semibold">
           {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-          {submitting ? "Mengirim..." : "Kirim Laporan"}
+          {submitting ? "Mengirim..." : "Kirim laporan"}
         </Button>
-        {submitting && (
-          <span className="text-xs text-muted-foreground">
-            Mengunggah foto dan menyimpan laporan...
-          </span>
-        )}
       </div>
     </form>
   );

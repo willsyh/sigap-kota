@@ -4,7 +4,6 @@ import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
-import Navbar from "@/components/Navbar";
 import AuthForm, { sanitizeNextParam } from "@/components/auth/AuthForm";
 import { createClient } from "@/lib/supabase/client";
 
@@ -20,9 +19,8 @@ function LoginPageContent() {
   }, [router, nextPath]);
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <Navbar />
-      <main className="flex flex-1 items-center justify-center p-4">
+    <div className="civic-map-pattern flex min-h-screen flex-col bg-surface">
+      <main className="flex flex-1 items-center justify-center p-4 py-10">
         <AuthForm mode="login" nextPath={nextPath ?? undefined} />
       </main>
     </div>
@@ -33,7 +31,7 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="civic-map-pattern flex min-h-screen items-center justify-center bg-surface">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       }

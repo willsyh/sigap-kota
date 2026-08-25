@@ -3,13 +3,28 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { MapPin, FileText, PlusCircle, ShieldCheck, LogOut } from "lucide-react";
+import {
+  FileText,
+  Layers3,
+  LogIn,
+  LogOut,
+  Map,
+  Menu,
+  PlusCircle,
+  ShieldCheck,
+} from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
+import { cn } from "@/lib/utils";
 
-export default function Navbar() {
+interface NavbarProps {
+  viewMode?: "marker" | "heatmap";
+  onViewModeToggle?: () => void;
+}
+
+export default function Navbar({ viewMode, onViewModeToggle }: NavbarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
@@ -17,19 +32,14 @@ export default function Navbar() {
   useEffect(() => {
     const supabase = createClient();
 
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user);
-    });
-
+    supabase.auth.getUser().then(({ data }) => setUser(data.user));
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
 
-    return () => {
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   async function handleLogout() {
@@ -40,37 +50,51 @@ export default function Navbar() {
   }
 
   const isAdmin = user?.user_metadata?.role === "admin";
-
   const navItems = [
-    { href: "/", label: "Peta Utama", icon: MapPin },
-    { href: "/laporan", label: "Daftar Laporan", icon: FileText },
+    { href: "/", label: "Peta", icon: Map },
+    { href: "/laporan", label: "Laporan", icon: FileText },
     ...(isAdmin
-      ? [{ href: "/admin", label: "Panel Admin", icon: ShieldCheck }]
+      ? [{ href: "/admin", label: "Admin", icon: ShieldCheck }]
       : []),
   ];
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 items-center justify-between px-4">
-        <div className="flex items-center gap-6">
-          <Link href="/" className="flex items-center gap-2 font-bold text-lg text-primary">
-            <MapPin className="h-5 w-5 text-primary" />
-            <span>SigapKota</span>
+    <header className="sticky top-0 z-50 h-16 w-full border-b border-outline-variant/25 bg-surface/96 shadow-sm backdrop-blur-md">
+      <div className="relative mx-auto flex h-full w-full max-w-7xl items-center justify-between px-4 md:px-6">
+        <Link
+          href="/laporan"
+          aria-label="Buka daftar laporan"
+          className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-surface-container focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+        >
+          <Menu className="h-6 w-6" />
+        </Link>
+
+        <div className="flex items-center gap-8">
+          <Link
+            href="/"
+            className="absolute left-1/2 -translate-x-1/2 font-heading text-xl font-bold tracking-[-0.035em] text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:static md:translate-x-0"
+          >
+            SigapKota
           </Link>
 
-          <nav className="hidden md:flex items-center gap-1 text-sm">
+          <nav aria-label="Navigasi desktop" className="hidden items-center gap-1 md:flex">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === item.href;
+              const active =
+                item.href === "/"
+                  ? pathname === "/"
+                  : pathname.startsWith(item.href);
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                    isActive
-                      ? "bg-accent text-accent-foreground font-semibold"
-                      : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-                  }`}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "flex h-10 items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    active
+                      ? "bg-primary/10 text-primary"
+                      : "text-on-surface-variant hover:bg-surface-container hover:text-primary",
+                  )}
                 >
                   <Icon className="h-4 w-4" />
                   {item.label}
@@ -80,40 +104,59 @@ export default function Navbar() {
           </nav>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Link href="/laporan/baru">
-            <Button size="sm" className="h-8 gap-1 text-xs" aria-label="Buat Laporan">
-              <PlusCircle className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Buat Laporan</span>
-            </Button>
+        <div className="hidden items-center gap-2 md:flex">
+          <Link
+            href="/laporan/baru"
+            className={cn(buttonVariants({ size: "sm" }), "h-10 gap-2 rounded-lg")}
+          >
+            <PlusCircle className="h-4 w-4" />
+            Buat laporan
           </Link>
-
           {user ? (
-            <div className="flex items-center gap-2">
-              <span
-                className="hidden sm:inline max-w-[140px] truncate text-xs text-muted-foreground"
-                title={user.email ?? ""}
-              >
-                {user.email}
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 gap-1 text-xs"
-                onClick={handleLogout}
-              >
-                <LogOut className="h-3.5 w-3.5" />
-                <span>Keluar</span>
-              </Button>
-            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleLogout}
+              className="h-10 gap-2 text-on-surface-variant"
+              title={user.email ?? undefined}
+            >
+              <LogOut className="h-4 w-4" />
+              Keluar
+            </Button>
           ) : (
-            <Link href="/auth/login">
-              <Button variant="outline" size="sm" className="h-8 text-xs">
-                Masuk
-              </Button>
+            <Link
+              href="/auth/login"
+              className={cn(
+                buttonVariants({ variant: "outline", size: "sm" }),
+                "h-10 gap-2",
+              )}
+            >
+              <LogIn className="h-4 w-4" />
+              Masuk
             </Link>
           )}
         </div>
+
+        {onViewModeToggle ? (
+          <button
+            type="button"
+            onClick={onViewModeToggle}
+            aria-label={viewMode === "marker" ? "Tampilkan heatmap" : "Tampilkan pin laporan"}
+            aria-pressed={viewMode === "heatmap"}
+            className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-surface-container hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+          >
+            <Layers3 className="h-5 w-5" />
+          </button>
+        ) : (
+          <Link
+            href="/"
+            aria-label="Buka tampilan peta"
+            className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-surface-container hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+          >
+            <Layers3 className="h-5 w-5" />
+          </Link>
+        )}
       </div>
     </header>
   );
