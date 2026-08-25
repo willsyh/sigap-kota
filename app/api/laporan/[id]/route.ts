@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { REPORT_STATUSES } from "@/lib/constants/reports";
 import type { ReportStatus } from "@/lib/types";
+
+const ALLOWED_STATUSES: ReportStatus[] = ["dilaporkan", "diproses", "menunggu_konfirmasi", "selesai"];
+
+// Status yang boleh di-set langsung oleh admin (tanpa foto)
+const ADMIN_DIRECT_STATUSES: ReportStatus[] = ["dilaporkan", "diproses"];
 
 export async function PATCH(
   request: NextRequest,
@@ -11,7 +15,6 @@ export async function PATCH(
 ) {
   const { id } = await params;
 
-  // Cek sesi: harus admin
   const supabaseAuth = await createClient();
   const {
     data: { user },
@@ -25,6 +28,72 @@ export async function PATCH(
     return NextResponse.json({ error: "Akses ditolak" }, { status: 403 });
   }
 
+  const supabase = createAdminClient();
+
+  const { data: existing, error: fetchError } = await supabase
+    .from("reports")
+    .select("status")
+    .eq("id", id)
+    .single();
+
+  if (fetchError || !existing) {
+    return NextResponse.json({ error: "Laporan tidak ditemukan" }, { status: 404 });
+  }
+
+  const contentType = request.headers.get("content-type") ?? "";
+
+  // --- Kasus: admin upload foto + set menunggu_konfirmasi (multipart) ---
+  if (contentType.includes("multipart/form-data")) {
+    let formData: FormData;
+    try {
+      formData = await request.formData();
+    } catch {
+      return NextResponse.json({ error: "Form data tidak valid" }, { status: 400 });
+    }
+
+    const file = formData.get("photo_after");
+    if (!file || !(file instanceof File)) {
+      return NextResponse.json({ error: "Foto sesudah wajib disertakan" }, { status: 400 });
+    }
+
+    const ext = file.name.split(".").pop() ?? "jpg";
+    const path = `after/${id}-${Date.now()}.${ext}`;
+    const arrayBuffer = await file.arrayBuffer();
+
+    const { error: uploadError } = await supabase.storage
+      .from("report-photos")
+      .upload(path, arrayBuffer, { contentType: file.type, upsert: true });
+
+    if (uploadError) {
+      console.error("PATCH storage upload error:", uploadError.message);
+      return NextResponse.json({ error: "Gagal upload foto", detail: uploadError.message }, { status: 500 });
+    }
+
+    const { data: urlData } = supabase.storage.from("report-photos").getPublicUrl(path);
+    const photoAfterUrl = urlData.publicUrl;
+
+    const { data, error: updateError } = await supabase
+      .from("reports")
+      .update({ status: "menunggu_konfirmasi", photo_after_url: photoAfterUrl })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error("PATCH laporan update error:", updateError.message, updateError.code);
+      return NextResponse.json({ error: "Gagal memperbarui laporan", detail: updateError.message }, { status: 500 });
+    }
+
+    await supabase.from("status_logs").insert({
+      report_id: id,
+      old_status: existing.status,
+      new_status: "menunggu_konfirmasi",
+    });
+
+    return NextResponse.json(data);
+  }
+
+  // --- Kasus: update status biasa (JSON) ---
   let body: unknown;
   try {
     body = await request.json();
@@ -36,27 +105,17 @@ export async function PATCH(
 
   if (
     typeof status !== "string" ||
-    !REPORT_STATUSES.includes(status as ReportStatus)
+    !ALLOWED_STATUSES.includes(status as ReportStatus)
   ) {
-    return NextResponse.json(
-      { error: "Status tidak valid" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Status tidak valid" }, { status: 400 });
   }
 
-  const supabase = createAdminClient();
-
-  // Ambil status lama untuk activity log
-  const { data: existing, error: fetchError } = await supabase
-    .from("reports")
-    .select("status")
-    .eq("id", id)
-    .single();
-
-  if (fetchError || !existing) {
+  // Admin hanya boleh set status dilaporkan/diproses via JSON;
+  // menunggu_konfirmasi via multipart, selesai via endpoint konfirmasi user
+  if (!ADMIN_DIRECT_STATUSES.includes(status as ReportStatus)) {
     return NextResponse.json(
-      { error: "Laporan tidak ditemukan" },
-      { status: 404 },
+      { error: "Gunakan endpoint yang sesuai untuk status ini" },
+      { status: 400 },
     );
   }
 
@@ -68,22 +127,15 @@ export async function PATCH(
     .single();
 
   if (updateError) {
-    return NextResponse.json(
-      { error: "Gagal memperbarui status" },
-      { status: 500 },
-    );
+    console.error("PATCH laporan status error:", updateError.message, updateError.code);
+    return NextResponse.json({ error: "Gagal memperbarui status", detail: updateError.message }, { status: 500 });
   }
 
-  // Catat perubahan status
-  const { error: logError } = await supabase.from("status_logs").insert({
+  await supabase.from("status_logs").insert({
     report_id: id,
     old_status: existing.status,
     new_status: status as ReportStatus,
   });
-
-  if (logError) {
-    console.error("Gagal mencatat status_logs:", logError.message);
-  }
 
   return NextResponse.json(data);
 }

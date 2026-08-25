@@ -10,9 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -296,72 +293,71 @@ export default function ReportForm() {
     }
   }
 
+  function sectionHeader(step: number, title: string, hint: string, done = false) {
+    return (
+      <div className="flex items-center gap-3">
+        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold transition-colors ${done ? "bg-primary text-primary-foreground" : "border-2 border-outline-variant/50 bg-surface-lowest text-outline"}`}>
+          {done ? <Check className="h-4 w-4" /> : step}
+        </span>
+        <div>
+          <p className="font-heading text-base font-bold leading-tight text-on-surface">{title}</p>
+          <p className="text-xs text-outline">{hint}</p>
+        </div>
+      </div>
+    );
+  }
+
+  const canSubmit = Boolean(title.trim() && category && !submitting);
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 pb-28">
-      {/* Duplicate detection: banner di atas form agar langsung terlihat,
-          tidak memblokir submit */}
+    <form onSubmit={handleSubmit} className="space-y-5 pb-32">
+      {/* Duplicate detection banner */}
       {checkingDuplicates && candidates.length === 0 && (
-        <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Loader2 className="h-3 w-3 animate-spin" />
-          Memeriksa laporan serupa di sekitar lokasi...
-        </p>
+        <div className="flex items-center gap-2 rounded-xl border border-outline-variant/30 bg-surface-low px-4 py-3">
+          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+          <span className="text-xs font-medium text-on-surface-variant">Memeriksa laporan serupa di sekitar lokasi...</span>
+        </div>
       )}
 
       {candidates.length > 0 && (
-        <Card className="rounded-xl border-outline-variant/30 bg-surface-container/65 shadow-[0_2px_12px_rgba(0,109,119,0.05)]">
-          <CardContent className="space-y-3 p-4">
-            <div className="flex items-start gap-2.5">
-              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary/15">
-                <Copy className="h-4 w-4 text-secondary-foreground" />
+        <Card className="overflow-hidden rounded-2xl border-secondary/30 shadow-[0_2px_12px_rgba(142,78,20,0.08)]">
+          <CardContent className="space-y-3 p-4 sm:p-5">
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary/15">
+                <Copy className="h-4 w-4 text-secondary" />
               </div>
               <div className="space-y-1">
-                <p className="text-sm font-semibold">Laporan serupa ditemukan</p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm font-bold text-on-surface">Laporan serupa ditemukan</p>
+                <p className="text-xs leading-relaxed text-on-surface-variant">
                   Ada laporan aktif dengan kategori dan lokasi yang mirip.
-                  Mendukung laporan yang ada membantu penanganan lebih cepat.
+                  Mendukung laporan yang ada membantu mempercepat penanganan.
                 </p>
               </div>
             </div>
 
-            <ul className="divide-y overflow-hidden rounded-md border bg-background">
+            <ul className="divide-y overflow-hidden rounded-xl border border-outline-variant/40 bg-surface-lowest">
               {candidates.map((candidate) => {
                 const voted = votedIds.has(candidate.id);
                 const voting = votingId === candidate.id;
 
                 return (
-                  <li
-                    key={candidate.id}
-                    className="flex items-center justify-between gap-3 p-3"
-                  >
+                  <li key={candidate.id} className="flex items-center justify-between gap-3 p-3.5">
                     <div className="min-w-0 space-y-1.5">
-                      <p className="truncate text-sm font-medium">
-                        {candidate.title}
-                      </p>
-                      <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-                        <Badge
-                          variant={
-                            STATUS_BADGE_VARIANTS[
-                              candidate.status as ReportStatus
-                            ] ?? "outline"
-                          }
-                          className="px-1.5 py-0 text-[10px]"
-                        >
-                          {STATUS_LABELS[candidate.status as ReportStatus] ??
-                            candidate.status}
+                      <p className="truncate text-sm font-semibold text-on-surface">{candidate.title}</p>
+                      <div className="flex flex-wrap items-center gap-2 text-[11px] text-on-surface-variant">
+                        <Badge variant={STATUS_BADGE_VARIANTS[candidate.status as ReportStatus] ?? "outline"} className="px-1.5 py-0 text-[10px]">
+                          {STATUS_LABELS[candidate.status as ReportStatus] ?? candidate.status}
                         </Badge>
-                        <span className="flex items-center gap-1">
-                          <ThumbsUp className="h-3 w-3" />
-                          {candidate.vote_count ?? 0}
-                        </span>
-                        <span>~{candidate.distance_meters} m</span>
+                        <span className="flex items-center gap-1"><ThumbsUp className="h-3 w-3" />{candidate.vote_count ?? 0}</span>
+                        <span>~{candidate.distance_meters} m dari lokasi</span>
                       </div>
                     </div>
 
                     <Button
                       type="button"
-                      variant="outline"
+                      variant={voted ? "secondary" : "outline"}
                       size="sm"
-                      className="h-8 shrink-0 gap-1 text-xs"
+                      className="h-9 shrink-0 gap-1 rounded-full px-3.5 text-xs"
                       disabled={voted || voting}
                       onClick={() => handleSupport(candidate.id)}
                     >
@@ -373,7 +369,7 @@ export default function ReportForm() {
                           Didukung
                         </>
                       ) : (
-                        "Dukung laporan ini"
+                        "Dukung"
                       )}
                     </Button>
                   </li>
@@ -382,182 +378,170 @@ export default function ReportForm() {
             </ul>
 
             <div className="flex justify-end">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-8 text-xs"
-                onClick={handleDismissDuplicates}
-              >
-                Lanjut buat laporan baru
+              <Button type="button" variant="ghost" size="sm" className="h-9 rounded-full text-xs font-semibold text-primary" onClick={handleDismissDuplicates}>
+                Tetap lanjut buat laporan baru
               </Button>
             </div>
           </CardContent>
         </Card>
       )}
 
-      <div className="flex flex-col gap-6">
-        {/* Kolom kiri: detail laporan */}
-        <Card className="border-0 bg-transparent shadow-none">
-          <CardHeader className="hidden p-0">
-            <CardTitle className="text-sm">Detail Laporan</CardTitle>
-            <CardDescription>
-              Jelaskan masalah fasilitas umum yang kamu temukan.
-            </CardDescription>
-          </CardHeader>
+      {/* Step 1: Foto */}
+      <section className={`rounded-2xl border bg-surface-lowest p-4 shadow-[0_2px_12px_rgba(0,109,119,0.05)] transition-colors sm:p-5 ${photo ? "border-primary/30" : "border-outline-variant/35"}`}>
+        {sectionHeader(1, "Foto Bukti", "Foto membantu petugas memahami masalah", Boolean(photo))}
 
-          <CardContent className="flex flex-col gap-6 p-0">
-            <div className="order-3 space-y-2">
-              <Label htmlFor="title" className="text-xs font-bold uppercase tracking-[0.08em]">Judul</Label>
-              <Input
-                id="title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Contoh: Jalan berlubang di depan sekolah"
-                required
-                maxLength={120}
-                className="h-12 rounded-lg border-outline-variant bg-surface-lowest text-base shadow-[0_2px_12px_rgba(0,109,119,0.05)]"
-              />
-            </div>
+        <input ref={fileInputRef} id="photo" type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handlePhotoChange} />
 
-            <div className="order-2 space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-[0.08em]">Kategori</Label>
-              <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-2">
-                {REPORT_CATEGORIES.map((item) => {
-                  const Icon = item === "jalan_rusak" ? CircleDot : item === "sampah" ? Trash2 : item === "banjir" ? Waves : item === "fasilitas_umum" ? Landmark : Ellipsis;
-                  const active = category === item;
-                  return (
-                    <button key={item} type="button" onClick={() => setCategory(item)} aria-pressed={active} className={`flex h-11 shrink-0 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${active ? "border-2 border-tertiary bg-tertiary/10 font-semibold text-tertiary" : "border-outline-variant bg-surface text-on-surface-variant hover:bg-surface-container"}`}>
-                      <Icon className="h-4 w-4" />{CATEGORY_LABELS[item]}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="order-4 space-y-2">
-              <Label htmlFor="description" className="text-xs font-bold uppercase tracking-[0.08em]">Deskripsi</Label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Jelaskan kondisi, dampak, dan waktu kejadian..."
-                rows={5}
-                maxLength={1000}
-                className="rounded-lg border-outline-variant bg-surface-lowest text-base leading-relaxed shadow-[0_2px_12px_rgba(0,109,119,0.05)]"
-              />
-            </div>
-
-            <div className="order-1 space-y-2">
-              <Label htmlFor="photo" className="text-xs font-bold uppercase tracking-[0.08em]">Foto Bukti</Label>
-
-              {photoPreview ? (
-                <div className="relative h-28 w-28 overflow-hidden rounded-xl border border-outline-variant/40 shadow-sm">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={photoPreview}
-                    alt="Pratinjau foto"
-                    className="h-full w-full object-cover"
-                  />
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="icon"
-                    className="absolute right-1 top-1 h-10 w-10 rounded-full"
-                    onClick={handleRemovePhoto}
-                    aria-label="Hapus foto"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex h-28 w-28 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-outline-variant bg-surface-low text-outline transition-colors hover:bg-surface-container focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <ImagePlus className="h-8 w-8" />
-                  <span className="text-xs">
-                    Tambah foto
-                  </span>
-                </button>
-              )}
-
-              <input
-                ref={fileInputRef}
-                id="photo"
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="hidden"
-                onChange={handlePhotoChange}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Kolom kanan: lokasi */}
-        <Card className="border-0 bg-transparent shadow-none">
-          <CardHeader className="flex-row items-center justify-between space-y-0 p-0 pb-2">
-            <CardTitle className="text-xs font-bold uppercase tracking-[0.08em]">Lokasi</CardTitle>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-11 gap-2 rounded-full bg-surface-lowest px-4 text-xs text-primary shadow-md"
-              onClick={detectLocation}
-              disabled={locating || submitting}
-            >
-              {locating ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Crosshair className="h-3.5 w-3.5" />
-              )}
-              Gunakan lokasi saya
+        {photoPreview ? (
+          <div className="relative mt-4 overflow-hidden rounded-xl border border-outline-variant/40">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={photoPreview} alt="Pratinjau foto" className="aspect-video w-full object-cover" />
+            <Button type="button" variant="destructive" size="icon" className="absolute right-2 top-2 h-10 w-10 rounded-full shadow-lg" onClick={handleRemovePhoto} aria-label="Hapus foto">
+              <X className="h-4 w-4" />
             </Button>
-          </CardHeader>
+            <span className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-white backdrop-blur">
+              <ImagePlus className="h-3 w-3" />Foto terpasang
+            </span>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="mt-4 flex aspect-video w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-outline-variant/60 bg-surface-low transition-colors hover:border-primary/50 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10"><ImagePlus className="h-6 w-6 text-primary" /></span>
+            <span className="text-sm font-semibold text-on-surface">Tambahkan foto</span>
+            <span className="text-xs text-outline">JPEG, PNG, atau WebP - maks 5MB</span>
+          </button>
+        )}
+      </section>
 
-          <CardContent className="space-y-3 rounded-xl border border-outline-variant/50 bg-surface-lowest p-1 shadow-[0_2px_12px_rgba(0,109,119,0.05)]">
-            <div className="relative h-52 w-full overflow-hidden rounded-lg">
-              <LocationPickerMapWrapper
-                lat={coords.lat}
-                lng={coords.lng}
-                onChange={(lat, lng) => {
-                  userAdjustedRef.current = true;
-                  setCoords((prev) =>
-                    prev.lat === lat && prev.lng === lng
-                      ? prev
-                      : { lat, lng },
-                  );
-                }}
-              />
-              {locating && (
-                <div className="pointer-events-none absolute inset-0 z-[1100] flex items-start justify-center p-2">
-                  <span className="flex items-center gap-1.5 rounded-full border bg-background/90 px-3 py-1 text-xs text-muted-foreground shadow-sm">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    Mendeteksi lokasi...
+      {/* Step 2: Kategori */}
+      <section className={`rounded-2xl border bg-surface-lowest p-4 shadow-[0_2px_12px_rgba(0,109,119,0.05)] transition-colors sm:p-5 ${category ? "border-primary/30" : "border-outline-variant/35"}`}>
+        {sectionHeader(2, "Kategori Masalah", "Pilih jenis masalah yang kamu temukan", Boolean(category))}
+
+        <div className="mt-4 grid grid-cols-2 gap-2.5">
+          {REPORT_CATEGORIES.map((item) => {
+            const Icon = item === "jalan_rusak" ? CircleDot : item === "sampah" ? Trash2 : item === "banjir" ? Waves : item === "fasilitas_umum" ? Landmark : Ellipsis;
+            const active = category === item;
+            return (
+              <button
+                key={item}
+                type="button"
+                onClick={() => setCategory(item)}
+                aria-pressed={active}
+                className={`relative flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 p-3.5 text-center transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${active ? "border-primary bg-primary/5 shadow-sm" : "border-outline-variant/40 bg-surface-low hover:border-outline-variant hover:bg-surface-container"}`}
+              >
+                {active && (
+                  <span className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-white">
+                    <Check className="h-3 w-3" />
                   </span>
-                </div>
-              )}
-            </div>
+                )}
+                <Icon className={`h-6 w-6 ${active ? "text-primary" : "text-on-surface-variant"}`} />
+                <span className={`text-xs font-semibold leading-tight ${active ? "text-primary" : "text-on-surface-variant"}`}>{CATEGORY_LABELS[item]}</span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
-            <div className="flex min-h-12 items-center justify-between rounded-lg bg-surface-low px-3 py-2 text-xs text-on-surface-variant">
-              <span className="flex items-center gap-1.5">
-                <MapPin className="h-3.5 w-3.5" />
-                Posisi final diambil dari marker
-              </span>
-              <code className="text-[11px] tabular-nums">
-                {coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}
-              </code>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Step 3: Detail */}
+      <section className={`rounded-2xl border bg-surface-lowest p-4 shadow-[0_2px_12px_rgba(0,109,119,0.05)] transition-colors sm:p-5 ${title.trim() ? "border-primary/30" : "border-outline-variant/35"}`}>
+        {sectionHeader(3, "Detail Laporan", "Judul dan penjelasan masalah", Boolean(title.trim()))}
 
-      <div className="fixed inset-x-0 bottom-0 z-50 rounded-t-2xl border-t border-outline-variant/20 bg-surface/96 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-[0_-6px_24px_rgba(17,28,44,0.09)] backdrop-blur-md">
-        <Button type="submit" disabled={submitting || locating} className="mx-auto flex h-12 w-full max-w-[568px] rounded-lg font-heading text-lg font-semibold">
-          {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-          {submitting ? "Mengirim..." : "Kirim laporan"}
-        </Button>
+        <div className="mt-4 space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="title" className="text-xs font-semibold text-on-surface-variant">Judul laporan</Label>
+            <Input
+              id="title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Contoh: Jalan berlubang di depan sekolah"
+              required
+              maxLength={120}
+              className="h-12 rounded-xl border-outline-variant/50 bg-surface-low text-base focus-visible:border-primary"
+            />
+            <p className="text-right text-[10px] tabular-nums text-outline">{title.length}/120</p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="description" className="text-xs font-semibold text-on-surface-variant">Deskripsi <span className="font-normal text-outline">(opsional)</span></Label>
+            <Textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Jelaskan kondisi, dampak, dan waktu kejadian..."
+              rows={4}
+              maxLength={1000}
+              className="resize-none rounded-xl border-outline-variant/50 bg-surface-low text-base leading-relaxed focus-visible:border-primary"
+            />
+            <p className="text-right text-[10px] tabular-nums text-outline">{description.length}/1000</p>
+          </div>
+        </div>
+      </section>
+
+      {/* Step 4: Lokasi */}
+      <section className="rounded-2xl border border-outline-variant/35 bg-surface-lowest p-4 shadow-[0_2px_12px_rgba(0,109,119,0.05)] sm:p-5">
+        <div className="flex items-start justify-between gap-3">
+          {sectionHeader(4, "Titik Lokasi", "Geser marker atau pakai GPS")}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-9 shrink-0 gap-1.5 rounded-full px-3.5 text-xs font-semibold text-primary"
+            onClick={detectLocation}
+            disabled={locating || submitting}
+          >
+            {locating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Crosshair className="h-3.5 w-3.5" />}
+            Gunakan lokasi saya
+          </Button>
+        </div>
+
+        <CardContent className="space-y-3 p-0 pt-4">
+          <div className="relative h-52 w-full overflow-hidden rounded-xl border border-outline-variant/40">
+            <LocationPickerMapWrapper
+              lat={coords.lat}
+              lng={coords.lng}
+              onChange={(lat, lng) => {
+                userAdjustedRef.current = true;
+                setCoords((prev) => (prev.lat === lat && prev.lng === lng ? prev : { lat, lng }));
+              }}
+            />
+            {locating && (
+              <div className="pointer-events-none absolute inset-0 z-[1100] flex items-start justify-center p-2">
+                <span className="flex items-center gap-1.5 rounded-full border bg-background/90 px-3 py-1 text-xs text-muted-foreground shadow-sm">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Mendeteksi lokasi...
+                </span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex min-h-11 items-center justify-between gap-2 rounded-xl bg-surface-low px-3 py-2">
+            <span className="flex items-center gap-1.5 text-xs text-on-surface-variant">
+              <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" />
+              Posisi marker di peta
+            </span>
+            <code className="shrink-0 text-[11px] tabular-nums text-on-surface-variant">
+              {coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}
+            </code>
+          </div>
+        </CardContent>
+      </section>
+
+      {/* Sticky submit bar */}
+      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-outline-variant/25 bg-surface/95 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-[0_-6px_24px_rgba(17,28,44,0.09)] backdrop-blur-md">
+        <div className="mx-auto max-w-[600px]">
+          {!canSubmit && !submitting && (
+            <p className="mb-2 text-center text-[11px] text-outline">
+              {!category ? "Pilih kategori dan isi judul untuk mengirim laporan" : "Isi judul laporan untuk melanjutkan"}
+            </p>
+          )}
+          <Button type="submit" disabled={!canSubmit} className="flex h-12 w-full rounded-xl font-heading text-base font-bold tracking-wide">
+            {submitting && <Loader2 className="h-5 w-5 animate-spin" />}
+            {submitting ? "Mengirim laporan..." : "Kirim Laporan"}
+          </Button>
+        </div>
       </div>
     </form>
   );

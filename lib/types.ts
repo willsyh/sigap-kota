@@ -5,7 +5,7 @@ export type ReportCategory =
   | "fasilitas_umum"
   | "lainnya";
 
-export type ReportStatus = "dilaporkan" | "diproses" | "selesai";
+export type ReportStatus = "dilaporkan" | "diproses" | "menunggu_konfirmasi" | "selesai";
 
 export type UserRole = "user" | "admin";
 

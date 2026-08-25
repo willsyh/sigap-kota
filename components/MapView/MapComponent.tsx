@@ -123,6 +123,7 @@ function createCustomIcon(status: Report["status"], isSelected: boolean) {
   const colorByStatus: Record<Report["status"], string> = {
     dilaporkan: "#6f797a",
     diproses: "#8e4e14",
+    menunggu_konfirmasi: "#b45309",
     selesai: "#01544f",
   };
   const color = colorByStatus[status];

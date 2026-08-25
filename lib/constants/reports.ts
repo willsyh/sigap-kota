@@ -11,6 +11,7 @@ export const REPORT_CATEGORIES = [
 export const REPORT_STATUSES = [
   "dilaporkan",
   "diproses",
+  "menunggu_konfirmasi",
   "selesai",
 ] as const satisfies readonly ReportStatus[];
 
@@ -33,14 +34,16 @@ export const CATEGORY_COLORS: Record<ReportCategory, string> = {
 export const STATUS_LABELS: Record<ReportStatus, string> = {
   dilaporkan: "Dilaporkan",
   diproses: "Diproses",
+  menunggu_konfirmasi: "Menunggu Konfirmasi",
   selesai: "Selesai",
 };
 
 export const STATUS_BADGE_VARIANTS: Record<
   ReportStatus,
-  "destructive" | "default" | "secondary"
+  "destructive" | "default" | "secondary" | "outline"
 > = {
   dilaporkan: "destructive",
   diproses: "default",
+  menunggu_konfirmasi: "outline",
   selesai: "secondary",
 };
