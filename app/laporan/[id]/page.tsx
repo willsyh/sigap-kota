@@ -82,10 +82,8 @@ export default function ReportDetailPage() {
 
   useEffect(() => {
     createClient().auth.getUser().then(({ data }) => {
-      const u = data.user;
-      const detected = u?.user_metadata?.role === "admin" || u?.app_metadata?.role === "admin";
-      setCurrentUserId(u?.id ?? null);
-      setIsAdmin(detected);
+      setCurrentUserId(data.user?.id ?? null);
+      setIsAdmin(data.user?.user_metadata?.role === "admin");
     });
   }, []);
 
@@ -93,7 +91,7 @@ export default function ReportDetailPage() {
     queryKey: ["report", reportId],
     queryFn: async () => {
       if (!reportId) return null;
-      const { data, error } = await createClient().from("reports").select("*").eq("id", reportId).is("deleted_at", null).maybeSingle();
+      const { data, error } = await createClient().from("reports").select("*").eq("id", reportId).maybeSingle();
       if (error) throw error;
       return (data as Report) ?? null;
     },

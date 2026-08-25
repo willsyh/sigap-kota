@@ -21,13 +21,9 @@ export async function GET(request: NextRequest) {
   // laporan diatur oleh RLS, bukan service-role.
   const supabase = await createClient();
 
-  let query = supabase
-    .from("reports")
-    .select("*")
-    .is("deleted_at", null)
-    .order("created_at", {
-      ascending: false,
-    });
+  let query = supabase.from("reports").select("*").order("created_at", {
+    ascending: false,
+  });
 
   if (
     kategori &&

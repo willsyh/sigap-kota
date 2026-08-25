@@ -65,7 +65,6 @@ export async function POST(
     .from("reports")
     .select("vote_count")
     .eq("id", id)
-    .is("deleted_at", null)
     .single();
 
   if (fetchError || !data) {

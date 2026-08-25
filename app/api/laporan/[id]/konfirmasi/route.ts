@@ -25,7 +25,6 @@ export async function POST(
     .from("reports")
     .select("status, user_id")
     .eq("id", id)
-    .is("deleted_at", null)
     .single();
 
   if (fetchError || !existing) {

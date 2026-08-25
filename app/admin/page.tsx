@@ -21,10 +21,11 @@ import {
   SlidersHorizontal,
   ThumbsUp,
   Upload,
+  UserRound,
   X,
 } from "lucide-react";
 
-import AdminSidebar from "@/components/admin/AdminSidebar";
+import CivicBrandMark from "@/components/CivicBrandMark";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -198,7 +199,21 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-surface">
-      <AdminSidebar adminEmail={adminEmail} />
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-outline-variant/30 bg-surface-lowest lg:flex">
+        <div className="flex h-20 items-center gap-3 border-b border-outline-variant/25 px-5">
+          <CivicBrandMark className="h-10 w-10" />
+          <div className="font-heading text-xl font-bold">SigapKota <span className="text-secondary">Admin</span></div>
+        </div>
+        <nav className="flex-1 p-4" aria-label="Navigasi admin">
+          <div className="flex h-12 items-center gap-3 rounded-xl bg-primary/10 px-4 text-sm font-medium text-primary">
+            <FileText className="h-5 w-5" />Manajemen Laporan
+          </div>
+        </nav>
+        <div className="flex items-center gap-3 border-t border-outline-variant/25 p-5">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground"><UserRound className="h-5 w-5" /></span>
+          <div className="min-w-0"><p className="text-sm font-semibold">Admin</p><p className="truncate text-xs text-outline" title={adminEmail}>{adminEmail || "Administrator"}</p></div>
+        </div>
+      </aside>
 
       <div className="lg:ml-64">
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-outline-variant/25 bg-surface/96 px-4 shadow-sm backdrop-blur-md sm:px-6">
