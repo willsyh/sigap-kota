@@ -10,7 +10,6 @@ import {
   LogOut,
   Map,
   Menu,
-  PlusCircle,
   ShieldCheck,
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
@@ -105,13 +104,6 @@ export default function Navbar({ viewMode, onViewModeToggle }: NavbarProps) {
         </div>
 
         <div className="hidden items-center gap-2 md:flex">
-          <Link
-            href="/laporan/baru"
-            className={cn(buttonVariants({ size: "sm" }), "h-10 gap-2 rounded-lg")}
-          >
-            <PlusCircle className="h-4 w-4" />
-            Buat laporan
-          </Link>
           {user ? (
             <Button
               type="button"

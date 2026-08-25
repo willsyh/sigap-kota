@@ -61,6 +61,8 @@ export default function Home() {
     const normalizedQuery = query.trim().toLocaleLowerCase("id-ID");
 
     return reports.filter((report) => {
+      // Laporan selesai disembunyikan dari peta (pin & heatmap)
+      if (report.status === "selesai") return false;
       const matchCategory = selectedCategory === "all" || report.category === selectedCategory;
       const matchStatus = selectedStatus === "all" || report.status === selectedStatus;
       const searchableText = [
