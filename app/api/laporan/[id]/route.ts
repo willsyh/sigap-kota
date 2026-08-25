@@ -172,7 +172,7 @@ export async function DELETE(
     );
   }
 
-  const isAdmin = user.user_metadata?.role === "admin";
+  const isAdmin = user.user_metadata?.role === "admin" || user.app_metadata?.role === "admin";
   const supabase = createAdminClient();
 
   const { data: existing, error: fetchError } = await supabase
@@ -208,9 +208,10 @@ export async function DELETE(
     );
   }
 
+  // Soft-delete: tandai deleted_at agar bisa dipulihkan admin.
   const { error: deleteError } = await supabase
     .from("reports")
-    .delete()
+    .update({ deleted_at: new Date().toISOString() })
     .eq("id", id);
 
   if (deleteError) {

@@ -22,4 +22,5 @@ export interface Report {
   status: ReportStatus;
   vote_count: number;
   created_at: string;
+  deleted_at?: string | null;
 }

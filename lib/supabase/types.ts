@@ -23,6 +23,7 @@ export interface Database {
           status: Database["public"]["Enums"]["report_status"];
           vote_count: number | null;
           created_at: string | null;
+          deleted_at: string | null;
         };
         Insert: {
           id?: string;
@@ -37,6 +38,7 @@ export interface Database {
           status?: Database["public"]["Enums"]["report_status"];
           vote_count?: number | null;
           created_at?: string | null;
+          deleted_at?: string | null;
         };
         Update: {
           id?: string;
@@ -51,6 +53,7 @@ export interface Database {
           status?: Database["public"]["Enums"]["report_status"];
           vote_count?: number | null;
           created_at?: string | null;
+          deleted_at?: string | null;
         };
         Relationships: [
           {
