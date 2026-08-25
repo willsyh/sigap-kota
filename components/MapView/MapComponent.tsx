@@ -55,29 +55,32 @@ function HeatmapLayer({ reports, onSwitchToMarker }: { reports: Report[]; onSwit
     const heatFactory = (L as unknown as { heatLayer?: unknown }).heatLayer;
     if (typeof heatFactory !== "function") return;
 
+    const currentZoom = map.getZoom();
+    // Increase weight when zoomed out to keep heatmap visible
+    const zoomOffset = Math.max(0, 18 - currentZoom); // assume max zoom ~18
+    const weightBoost = Math.min(0.3, zoomOffset * 0.02); // up to +0.3
+
     // Convert reports to [lat, lng, intensity]
-    const points: [number, number, number][] = reports.map((r) => [
-      r.latitude,
-      r.longitude,
-      Math.min(1.0, 0.4 + (r.vote_count || 1) * 0.1), // higher votes = higher intensity
-    ]);
+    const points: [number, number, number][] = reports.map((r) => {
+      const baseWeight = 0.4 + (r.vote_count || 1) * 0.1;
+      const weight = Math.min(1.0, baseWeight + weightBoost);
+      return [r.latitude, r.longitude, weight];
+    });
 
     const heatLayer = (L as unknown as { heatLayer: (pts: [number, number, number][], opts: Record<string, unknown>) => L.Layer })
       .heatLayer(points, {
-      radius: 25,
-      blur: 15,
-      maxZoom: 17,
-      max: 1.0,
-      // Civic Horizon ramp: teal for sparse activity, brand amber in the
-      // middle, strong red at peak density.
-      gradient: {
-        0.2: "#0f766e",
-        0.4: "#14b8a6",
-        0.6: "#f59e0b",
-        0.8: "#ea580c",
-        1.0: "#dc2626",
-      },
-    });
+        radius: 25,
+        blur: 15,
+        maxZoom: 17,
+        max: 1.0,
+        gradient: {
+          0.2: "#0f766e",
+          0.4: "#14b8a6",
+          0.6: "#f59e0b",
+          0.8: "#ea580c",
+          1.0: "#dc2626",
+        },
+      });
 
     heatLayer.addTo(map);
 
