@@ -56,9 +56,12 @@ function HeatmapLayer({ reports, onSwitchToMarker }: { reports: Report[]; onSwit
     if (typeof heatFactory !== "function") return;
 
     const currentZoom = map.getZoom();
-    // Increase weight when zoomed out to keep heatmap visible
-    const zoomOffset = Math.max(0, 18 - currentZoom); // assume max zoom ~18
-    const weightBoost = Math.min(0.3, zoomOffset * 0.02); // up to +0.3
+    // Increase weight and radius when zoomed out to keep heatmap visible
+    const zoomOut = Math.max(0, 18 - currentZoom); // how far we are from max zoom
+    const weightBoost = Math.min(0.5, zoomOut * 0.03); // up to +0.5
+    const radiusBoost = zoomOut * 0.5; // increase radius by 0.5px per zoom out step
+    const baseRadius = 25;
+    const radius = baseRadius + radiusBoost;
 
     // Convert reports to [lat, lng, intensity]
     const points: [number, number, number][] = reports.map((r) => {
@@ -69,7 +72,7 @@ function HeatmapLayer({ reports, onSwitchToMarker }: { reports: Report[]; onSwit
 
     const heatLayer = (L as unknown as { heatLayer: (pts: [number, number, number][], opts: Record<string, unknown>) => L.Layer })
       .heatLayer(points, {
-        radius: 25,
+        radius,
         blur: 15,
         maxZoom: 17,
         max: 1.0,
