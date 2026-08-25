@@ -55,25 +55,18 @@ function HeatmapLayer({ reports, onSwitchToMarker }: { reports: Report[]; onSwit
     const heatFactory = (L as unknown as { heatLayer?: unknown }).heatLayer;
     if (typeof heatFactory !== "function") return;
 
-    const currentZoom = map.getZoom();
-    // Increase weight and radius when zoomed out to keep heatmap visible
-    const zoomOut = Math.max(0, 18 - currentZoom); // how far we are from max zoom
-    const weightBoost = Math.min(0.5, zoomOut * 0.03); // up to +0.5
-    const radiusBoost = zoomOut * 0.5; // increase radius by 0.5px per zoom out step
-    const baseRadius = 25;
-    const radius = baseRadius + radiusBoost;
-
-    // Convert reports to [lat, lng, intensity]
-    const points: [number, number, number][] = reports.map((r) => {
-      const baseWeight = 0.4 + (r.vote_count || 1) * 0.1;
-      const weight = Math.min(1.0, baseWeight + weightBoost);
-      return [r.latitude, r.longitude, weight];
-    });
+    // Bobot tinggi & tetap agar setiap laporan terlihat jelas di semua
+    // level zoom, mirip pin: satu titik pun langsung membentuk blob.
+    const points: [number, number, number][] = reports.map((r) => [
+      r.latitude,
+      r.longitude,
+      Math.min(1.0, 0.75 + (r.vote_count || 0) * 0.02),
+    ]);
 
     const heatLayer = (L as unknown as { heatLayer: (pts: [number, number, number][], opts: Record<string, unknown>) => L.Layer })
       .heatLayer(points, {
-        radius,
-        blur: 15,
+        radius: 35,
+        blur: 22,
         maxZoom: 17,
         max: 1.0,
         gradient: {
