@@ -162,7 +162,7 @@ export interface Database {
         | "banjir"
         | "fasilitas_umum"
         | "lainnya";
-      report_status: "dilaporkan" | "diproses" | "selesai";
+      report_status: "dilaporkan" | "diproses" | "menunggu_konfirmasi" | "selesai";
     };
     CompositeTypes: Record<string, never>;
   };

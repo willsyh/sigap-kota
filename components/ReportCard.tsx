@@ -9,6 +9,7 @@ interface ReportCardProps { report: Report; }
 const statusStyles: Record<ReportStatus, { pill: string; dot: string }> = {
   dilaporkan: { pill: "bg-surface-container text-on-surface-variant", dot: "bg-outline" },
   diproses: { pill: "bg-secondary-container/20 text-on-secondary-container", dot: "bg-secondary" },
+  menunggu_konfirmasi: { pill: "bg-amber-50 text-amber-700", dot: "bg-amber-400" },
   selesai: { pill: "bg-tertiary/10 text-tertiary", dot: "bg-tertiary" },
 };
 

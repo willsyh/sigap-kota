@@ -30,12 +30,14 @@ import type { Report, ReportStatus } from "@/lib/types";
 const STEPS: { status: ReportStatus; label: string }[] = [
   { status: "dilaporkan", label: "Dilaporkan" },
   { status: "diproses", label: "Diproses" },
+  { status: "menunggu_konfirmasi", label: "Menunggu Konfirmasi" },
   { status: "selesai", label: "Selesai" },
 ];
 
 const statusPill: Record<ReportStatus, string> = {
   dilaporkan: "border-outline-variant bg-surface-container text-on-surface-variant",
   diproses: "border-secondary/20 bg-secondary-container/20 text-on-secondary-container",
+  menunggu_konfirmasi: "border-amber-300/50 bg-amber-50 text-amber-700",
   selesai: "border-tertiary/15 bg-tertiary/10 text-tertiary",
 };
 
@@ -61,6 +63,7 @@ export default function ReportDetailPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [sliderPosition, setSliderPosition] = useState(50);
   const [renderTimestamp] = useState(() => Date.now());
+  const [confirmPending, setConfirmPending] = useState(false);
 
   useEffect(() => {
     createClient().auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
@@ -137,6 +140,25 @@ export default function ReportDetailPage() {
     toast.success("Tautan laporan disalin.");
   }
 
+  async function handleKonfirmasi() {
+    if (!reportId) return;
+    setConfirmPending(true);
+    try {
+      const response = await fetch(`/api/laporan/${reportId}/konfirmasi`, { method: "POST" });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.error ?? "Gagal mengkonfirmasi");
+      }
+      toast.success("Laporan dikonfirmasi selesai. Terima kasih!");
+      queryClient.invalidateQueries({ queryKey: ["report", reportId] });
+      queryClient.invalidateQueries({ queryKey: ["status_logs", reportId] });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Gagal mengkonfirmasi");
+    } finally {
+      setConfirmPending(false);
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-surface">
@@ -174,6 +196,40 @@ export default function ReportDetailPage() {
     <div className="min-h-screen bg-surface">
       <DetailHeader title={report.title} onShare={handleShare} />
       <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 pb-12 pt-5">
+
+        {/* Banner konfirmasi selesai - hanya muncul untuk pemilik laporan */}
+        {report.status === "menunggu_konfirmasi" && report.user_id === currentUserId && (
+          <div className="overflow-hidden rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 shadow-sm">
+            <div className="flex items-start gap-3 border-b border-amber-200/60 bg-amber-100/50 px-5 py-4">
+              <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-500 text-white">
+                <CheckCircle2 className="h-4 w-4" />
+              </span>
+              <div>
+                <p className="font-semibold text-amber-900">Laporan Anda Sudah Ditangani</p>
+                <p className="mt-0.5 text-sm text-amber-700">
+                  Admin telah mengupload foto bukti. Periksa foto di bawah lalu konfirmasi.
+                </p>
+              </div>
+            </div>
+            <div className="px-5 py-4">
+              <p className="text-sm text-amber-800">
+                Apakah masalah yang Anda laporkan benar-benar sudah diselesaikan? Konfirmasi hanya jika Anda puas dengan penanganannya.
+              </p>
+              <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                <Button
+                  className="h-11 flex-1 gap-2 bg-amber-600 text-white hover:bg-amber-700"
+                  disabled={confirmPending}
+                  onClick={handleKonfirmasi}
+                >
+                  {confirmPending
+                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                    : <CheckCircle2 className="h-4 w-4" />}
+                  Ya, sudah selesai
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
         <section className="relative aspect-[4/3] w-full select-none overflow-hidden rounded-xl bg-surface-container shadow-sm md:aspect-video">
           {report.photo_url ? (
             <>
@@ -211,20 +267,23 @@ export default function ReportDetailPage() {
           </div>
         </section>
 
-        <section className="relative flex items-start justify-between overflow-hidden rounded-xl border border-surface-highest bg-surface-lowest p-5 shadow-sm">
-          <div className="absolute left-12 right-12 top-9 h-0.5 bg-surface-highest" />
-          {STEPS.map((step, index) => {
-            const completed = index <= currentStep;
-            const current = index === currentStep;
-            return (
-              <div key={step.status} className="relative z-10 flex w-24 flex-col items-center gap-2 bg-surface-lowest px-1 text-center">
-                <span className={`flex h-9 w-9 items-center justify-center rounded-full border-2 ${completed ? "border-primary bg-primary text-primary-foreground" : "border-outline-variant bg-surface text-outline"} ${current ? "ring-4 ring-primary/15" : ""}`}>
-                  {completed ? <Check className="h-4 w-4" /> : <Clock3 className="h-4 w-4" />}
-                </span>
-                <span className={`text-xs ${completed ? "font-medium text-primary" : "text-outline"}`}>{step.label}</span>
-              </div>
-            );
-          })}
+        <section className="relative overflow-hidden rounded-xl border border-surface-highest bg-surface-lowest p-5 shadow-sm">
+          {/* connector line */}
+          <div className="absolute left-[calc(12.5%+18px)] right-[calc(12.5%+18px)] top-[38px] h-0.5 bg-surface-highest" />
+          <div className="relative z-10 grid grid-cols-4 gap-1">
+            {STEPS.map((step, index) => {
+              const completed = index <= currentStep;
+              const current = index === currentStep;
+              return (
+                <div key={step.status} className="flex flex-col items-center gap-2 bg-surface-lowest px-1 text-center">
+                  <span className={`flex h-9 w-9 items-center justify-center rounded-full border-2 transition-colors ${completed ? "border-primary bg-primary text-primary-foreground" : "border-outline-variant bg-surface text-outline"} ${current ? "ring-4 ring-primary/15" : ""}`}>
+                    {completed ? <Check className="h-4 w-4" /> : <Clock3 className="h-4 w-4" />}
+                  </span>
+                  <span className={`text-[10px] leading-tight sm:text-xs ${completed ? "font-semibold text-primary" : "text-outline"}`}>{step.label}</span>
+                </div>
+              );
+            })}
+          </div>
         </section>
 
         <section className="space-y-2">

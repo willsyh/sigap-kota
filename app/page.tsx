@@ -104,6 +104,7 @@ export default function Home() {
   const statusDotClass: Record<ReportStatus, string> = {
     dilaporkan: "bg-outline",
     diproses: "bg-secondary",
+    menunggu_konfirmasi: "bg-amber-400",
     selesai: "bg-tertiary",
   };
 
