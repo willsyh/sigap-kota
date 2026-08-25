@@ -139,3 +139,70 @@ export async function PATCH(
 
   return NextResponse.json(data);
 }
+
+// Hapus laporan: pemilik laporan atau admin. Selalu dicatat di deletion_logs.
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+
+  const supabaseAuth = await createClient();
+  const {
+    data: { user },
+  } = await supabaseAuth.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Tidak terautentikasi" }, { status: 401 });
+  }
+
+  const isAdmin = user.user_metadata?.role === "admin";
+  const supabase = createAdminClient();
+
+  const { data: existing, error: fetchError } = await supabase
+    .from("reports")
+    .select("id, user_id, title, category")
+    .eq("id", id)
+    .single();
+
+  if (fetchError || !existing) {
+    return NextResponse.json({ error: "Laporan tidak ditemukan" }, { status: 404 });
+  }
+
+  // Hanya pemilik laporan atau admin yang boleh menghapus
+  if (existing.user_id !== user.id && !isAdmin) {
+    return NextResponse.json({ error: "Hanya pemilik laporan yang dapat menghapus" }, { status: 403 });
+  }
+
+  // Catat log penghapusan SEBELUM baris reports dihapus
+  const { error: logError } = await supabase.from("deletion_logs").insert({
+    report_id: existing.id,
+    deleted_by: user.id,
+    role: isAdmin ? "admin" : "user",
+    title: existing.title,
+    category: existing.category,
+  });
+
+  if (logError) {
+    console.error("DELETE deletion_logs error:", logError.message);
+    return NextResponse.json(
+      { error: "Gagal mencatat log penghapusan", detail: logError.message },
+      { status: 500 },
+    );
+  }
+
+  const { error: deleteError } = await supabase
+    .from("reports")
+    .delete()
+    .eq("id", id);
+
+  if (deleteError) {
+    console.error("DELETE laporan error:", deleteError.message);
+    return NextResponse.json(
+      { error: "Gagal menghapus laporan", detail: deleteError.message },
+      { status: 500 },
+    );
+  }
+
+  return NextResponse.json({ success: true });
+}

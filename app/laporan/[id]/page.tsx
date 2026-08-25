@@ -17,11 +17,20 @@ import {
   MoveHorizontal,
   Share2,
   ThumbsUp,
+  Trash2,
 } from "lucide-react";
 
 import MapView from "@/components/MapView";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { CATEGORY_LABELS, STATUS_LABELS } from "@/lib/constants/reports";
 import { createClient } from "@/lib/supabase/client";
 import type { StatusLogRow } from "@/lib/supabase/types";
@@ -64,6 +73,8 @@ export default function ReportDetailPage() {
   const [sliderPosition, setSliderPosition] = useState(50);
   const [renderTimestamp] = useState(() => Date.now());
   const [confirmPending, setConfirmPending] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deletePending, setDeletePending] = useState(false);
 
   useEffect(() => {
     createClient().auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
@@ -156,6 +167,26 @@ export default function ReportDetailPage() {
       toast.error(error instanceof Error ? error.message : "Gagal mengkonfirmasi");
     } finally {
       setConfirmPending(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!reportId) return;
+    setDeletePending(true);
+    try {
+      const response = await fetch(`/api/laporan/${reportId}`, { method: "DELETE" });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.error ?? "Gagal menghapus laporan");
+      }
+      toast.success("Laporan berhasil dihapus.");
+      queryClient.invalidateQueries({ queryKey: ["reports"] });
+      router.push("/laporan");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Gagal menghapus laporan");
+    } finally {
+      setDeletePending(false);
+      setDeleteOpen(false);
     }
   }
 
@@ -308,6 +339,20 @@ export default function ReportDetailPage() {
           <p className="max-w-xs text-xs leading-4 text-outline">{hasVoted ? "Anda sudah menandai laporan ini sebagai prioritas." : "Dukung agar laporan ini mendapat prioritas penanganan."}</p>
         </section>
 
+        {/* Hapus laporan - hanya pemilik */}
+        {report.user_id === currentUserId && (
+          <section className="flex items-center justify-between gap-4 rounded-xl border border-destructive/20 bg-destructive/5 p-4">
+            <div>
+              <p className="text-sm font-semibold text-on-surface">Hapus laporan ini</p>
+              <p className="mt-0.5 text-xs text-outline">Gunakan jika laporan ini spam atau tidak valid. Tindakan tidak dapat dibatalkan.</p>
+            </div>
+            <Button variant="destructive" className="h-10 shrink-0 gap-2" onClick={() => setDeleteOpen(true)}>
+              <Trash2 className="h-4 w-4" />
+              Hapus
+            </Button>
+          </section>
+        )}
+
         <section className="space-y-4 pb-6">
           <h3 className="font-heading text-xl font-semibold">Log Aktivitas</h3>
           <div className="relative ml-4 space-y-6 border-l-2 border-surface-highest py-1 pl-6">
@@ -331,6 +376,27 @@ export default function ReportDetailPage() {
           </div>
         </section>
       </main>
+
+      {/* Dialog konfirmasi hapus */}
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Hapus laporan ini?</DialogTitle>
+            <DialogDescription>
+              Laporan &ldquo;{report.title}&rdquo; akan dihapus permanen beserta seluruh dukungannya. Penghapusan dicatat dalam log sistem.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteOpen(false)} disabled={deletePending}>
+              Batal
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deletePending} className="gap-2">
+              {deletePending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              Ya, hapus
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

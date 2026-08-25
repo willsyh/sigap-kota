@@ -130,6 +130,39 @@ export interface Database {
           },
         ];
       };
+      deletion_logs: {
+        Row: {
+          id: string;
+          report_id: string;
+          deleted_by: string | null;
+          role: string;
+          title: string | null;
+          category: string | null;
+          reason: string | null;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          report_id: string;
+          deleted_by?: string | null;
+          role?: string;
+          title?: string | null;
+          category?: string | null;
+          reason?: string | null;
+          created_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          report_id?: string;
+          deleted_by?: string | null;
+          role?: string;
+          title?: string | null;
+          category?: string | null;
+          reason?: string | null;
+          created_at?: string | null;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     MaterializedViews: Record<string, never>;
