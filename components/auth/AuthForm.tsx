@@ -4,7 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AuthError } from "@supabase/supabase-js";
-import { Eye, EyeOff, Loader2, LockKeyhole, Mail } from "lucide-react";
+import { CheckCircle2, Eye, EyeOff, Loader2, LockKeyhole, Mail } from "lucide-react";
+import { toast } from "sonner";
 
 import CivicBrandMark from "@/components/CivicBrandMark";
 import { Button } from "@/components/ui/button";
@@ -49,6 +50,7 @@ export default function AuthForm({ mode, nextPath }: AuthFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
   const isLogin = mode === "login";
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -61,6 +63,10 @@ export default function AuthForm({ mode, nextPath }: AuthFormProps) {
       if (isLogin) {
         const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
         if (authError) { setError(mapAuthErrorMessage(authError)); return; }
+        setSuccess(true);
+        toast.success("Berhasil masuk.", {
+          description: "Sesi akun Anda sekarang aktif.",
+        });
         router.replace(nextPath ?? "/");
         router.refresh();
       } else {
@@ -146,9 +152,22 @@ export default function AuthForm({ mode, nextPath }: AuthFormProps) {
         {error && <p className="anim-fade-in rounded-lg bg-error-container px-3 py-2 text-xs text-on-error-container" role="alert">{error}</p>}
         {info && <p className="anim-fade-in rounded-lg bg-tertiary/10 px-3 py-2 text-xs text-tertiary" role="status">{info}</p>}
 
-        <Button type="submit" className="h-12 w-full rounded-lg font-semibold" disabled={loading}>
-          {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-          {isLogin ? "Masuk" : "Daftar"}
+        <Button
+          type="submit"
+          className="h-12 w-full rounded-lg font-semibold"
+          disabled={loading || success}
+          aria-busy={loading}
+        >
+          {success ? (
+            <CheckCircle2 className="anim-scale-in h-4 w-4" aria-hidden="true" />
+          ) : loading ? (
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+          ) : null}
+          {success
+            ? "Berhasil masuk"
+            : loading
+              ? isLogin ? "Sedang masuk..." : "Sedang mendaftar..."
+              : isLogin ? "Masuk" : "Daftar"}
         </Button>
       </form>
 
