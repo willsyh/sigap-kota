@@ -140,7 +140,7 @@ export default function BottomNav() {
                 type="button"
                 aria-haspopup="dialog"
                 onClick={() => setAccountOpen(true)}
-                className="flex min-w-0 flex-1 cursor-pointer flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium text-outline transition-colors hover:bg-surface-container/60 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                className="flex min-w-0 flex-1 cursor-pointer flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium text-outline transition-colors duration-150 ease-out hover:bg-surface-container/60 hover:text-primary active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
               >
                 <span className="flex h-8 w-10 items-center justify-center">
                   <Icon className="h-6 w-6" strokeWidth={2} />
@@ -157,7 +157,7 @@ export default function BottomNav() {
                 href={tab.href}
                 className="group relative flex min-w-0 flex-1 flex-col items-center justify-end gap-1 pb-2 text-[11px] font-medium text-outline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
               >
-                <span className="absolute -top-5 flex h-14 w-14 items-center justify-center rounded-full bg-secondary text-secondary-foreground shadow-[0_6px_20px_rgba(142,78,20,0.28)] transition-colors group-hover:bg-secondary/90">
+                <span className="absolute -top-5 flex h-14 w-14 items-center justify-center rounded-full bg-secondary text-secondary-foreground shadow-[0_6px_20px_rgba(142,78,20,0.28)] transition-all duration-150 ease-out group-hover:bg-secondary/90 group-active:scale-[0.94]">
                   <Icon className="h-7 w-7" strokeWidth={2.2} />
                 </span>
                 {tab.label}
@@ -171,7 +171,7 @@ export default function BottomNav() {
               href={tab.href}
               aria-current={tab.isActive ? "page" : undefined}
               className={cn(
-                "relative flex min-w-0 flex-1 flex-col items-center justify-center gap-1 py-2 text-[11px] transition-colors hover:bg-surface-container/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                "relative flex min-w-0 flex-1 flex-col items-center justify-center gap-1 py-2 text-[11px] transition-colors duration-150 ease-out hover:bg-surface-container/60 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
                 tab.isActive
                   ? "font-semibold text-primary"
                   : "font-medium text-outline hover:text-primary",

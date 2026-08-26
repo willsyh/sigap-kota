@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Report } from "@/lib/types";
+import type { PerceptionPoint } from "@/components/perceptions/PerceptionPulseCard";
 
 interface MapViewProps {
   reports: Report[];
@@ -10,8 +11,10 @@ interface MapViewProps {
   onSelectReport?: (report: Report) => void;
   center?: [number, number];
   zoom?: number;
-  viewMode?: "marker" | "heatmap";
-  onSwitchToMarker?: () => void;
+  viewMode?: "pin" | "heatmap" | "unseen";
+  onSwitchToPin?: () => void;
+  perceptions?: PerceptionPoint[];
+  onMapClick?: (lat: number, lng: number) => void;
 }
 
 const MapComponent = dynamic(() => import("./MapComponent"), {

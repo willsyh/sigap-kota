@@ -11,6 +11,7 @@ import {
   Check,
   CheckCircle2,
   Clock3,
+  Eye,
   ImageOff,
   Loader2,
   MapPin,
@@ -21,6 +22,7 @@ import {
 } from "lucide-react";
 
 import MapView from "@/components/MapView";
+import PerceptionDialog from "@/components/perceptions/PerceptionDialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,33 +35,47 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { CATEGORY_LABELS, STATUS_LABELS } from "@/lib/constants/reports";
+import { CATEGORY_LABELS, STATUS_META } from "@/lib/constants/reports";
+import {
+  PERCEPTION_SENTIMENTS,
+  PERCEPTION_SENTIMENT_COLORS,
+  PERCEPTION_SENTIMENT_LABELS,
+} from "@/lib/constants/perceptions";
 import { createClient } from "@/lib/supabase/client";
+import { usePlaceName } from "@/lib/utils/geocode";
 import type { StatusLogRow } from "@/lib/supabase/types";
 import type { Report, ReportStatus } from "@/lib/types";
 
-const STEPS: { status: ReportStatus; label: string }[] = [
-  { status: "dilaporkan", label: "Dilaporkan" },
-  { status: "diproses", label: "Diproses" },
-  { status: "menunggu_konfirmasi", label: "Menunggu Konfirmasi" },
-  { status: "selesai", label: "Selesai" },
+const STEPS: { status: ReportStatus }[] = [
+  { status: "dilaporkan" },
+  { status: "diproses" },
+  { status: "menunggu_konfirmasi" },
+  { status: "selesai" },
 ];
 
-const statusPill: Record<ReportStatus, string> = {
-  dilaporkan: "border-outline-variant bg-surface-container text-on-surface-variant",
-  diproses: "border-secondary/20 bg-secondary-container/20 text-on-secondary-container",
-  menunggu_konfirmasi: "border-amber-300/50 bg-amber-50 text-amber-700",
-  selesai: "border-tertiary/15 bg-tertiary/10 text-tertiary",
-};
+type PerceptionSentiment = "nyaman" | "biasa" | "tidak_nyaman";
+
+interface PerceptionRow {
+  id: string;
+  latitude: number;
+  longitude: number;
+  sentiment: PerceptionSentiment;
+  reason: string | null;
+  report_id: string | null;
+  created_at: string;
+}
+
+// Sampel minimum sebelum persentase dianggap representatif.
+const PERCEPTION_MIN_SAMPLE = 5;
 
 function DetailHeader({ title, onShare }: { title: string; onShare?: () => void }) {
   return (
     <header className="sticky top-0 z-50 flex h-16 items-center justify-between border-b border-outline-variant/20 bg-surface/96 px-4 shadow-sm backdrop-blur-md">
-      <Link href="/laporan" aria-label="Kembali ke daftar laporan" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-primary transition-colors hover:bg-surface-container focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <Link href="/laporan" aria-label="Kembali ke daftar laporan" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-primary transition-all duration-150 ease-out hover:bg-surface-container active:scale-[0.95] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
         <ArrowLeft className="h-6 w-6" />
       </Link>
       <h1 className="mx-2 min-w-0 flex-1 truncate text-center font-heading text-lg font-bold text-primary">{title}</h1>
-      <button type="button" onClick={onShare} disabled={!onShare} aria-label="Bagikan laporan" className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-primary transition-colors hover:bg-surface-container focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default disabled:opacity-40">
+      <button type="button" onClick={onShare} disabled={!onShare} aria-label="Bagikan laporan" className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-primary transition-all duration-150 ease-out hover:bg-surface-container active:scale-[0.95] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default disabled:opacity-40">
         <Share2 className="h-5 w-5" />
       </button>
     </header>
@@ -79,6 +95,7 @@ export default function ReportDetailPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deletePending, setDeletePending] = useState(false);
   const [deleteReason, setDeleteReason] = useState("");
+  const [perceptionDialogOpen, setPerceptionDialogOpen] = useState(false);
 
   useEffect(() => {
     createClient().auth.getUser().then(({ data }) => {
@@ -119,6 +136,17 @@ export default function ReportDetailPage() {
     enabled: Boolean(reportId && currentUserId),
   });
 
+  const { data: perceptions = [], isLoading: perceptionsLoading, isError: perceptionsError } = useQuery<PerceptionRow[]>({
+    queryKey: ["persepsi", "report", reportId],
+    queryFn: async () => {
+      if (!reportId) return [];
+      const response = await fetch(`/api/persepsi?report_id=${reportId}`);
+      if (!response.ok) throw new Error("Gagal memuat persepsi");
+      return response.json() as Promise<PerceptionRow[]>;
+    },
+    enabled: Boolean(reportId),
+  });
+
   const voteMutation = useMutation({
     mutationFn: async () => {
       if (!currentUserId) {
@@ -147,6 +175,9 @@ export default function ReportDetailPage() {
       }
     },
   });
+
+  // Hook harus dipanggil sebelum early-return agar urutan hook selalu konsisten.
+  const placeName = usePlaceName(report?.latitude, report?.longitude);
 
   async function handleShare() {
     const url = window.location.href;
@@ -231,6 +262,8 @@ export default function ReportDetailPage() {
   }
 
   const currentStep = STEPS.findIndex((step) => step.status === report.status);
+  const statusMeta = STATUS_META[report.status];
+  const locationLabel = placeName ?? `${report.latitude.toFixed(5)}, ${report.longitude.toFixed(5)}`;
   const activity = [...statusLogs].reverse();
   const reportedDate = new Date(report.created_at);
   const daysAgo = Math.max(0, Math.floor((renderTimestamp - reportedDate.getTime()) / 86_400_000));
@@ -240,9 +273,19 @@ export default function ReportDetailPage() {
       <DetailHeader title={report.title} onShare={handleShare} />
       <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 pb-12 pt-5">
 
+        {/* Info antrean untuk laporan berstatus dilaporkan */}
+        {report.status === "dilaporkan" && (
+          <div className="anim-fade-in flex items-start gap-2.5 rounded-xl border border-outline-variant/30 bg-surface-low px-4 py-3">
+            <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+            <p className="text-sm leading-relaxed text-on-surface-variant">
+              Laporan Anda masuk antrean tinjauan. Pantau statusnya di halaman ini.
+            </p>
+          </div>
+        )}
+
         {/* Banner konfirmasi selesai - hanya muncul untuk pemilik laporan */}
         {report.status === "menunggu_konfirmasi" && report.user_id === currentUserId && (
-          <div className="overflow-hidden rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 shadow-sm">
+          <div className="anim-fade-up overflow-hidden rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 shadow-sm">
             <div className="flex items-start gap-3 border-b border-amber-200/60 bg-amber-100/50 px-5 py-4">
               <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-500 text-white">
                 <CheckCircle2 className="h-4 w-4" />
@@ -283,9 +326,9 @@ export default function ReportDetailPage() {
                   <div className="absolute inset-0 overflow-hidden" style={{ clipPath: `polygon(0 0, ${sliderPosition}% 0, ${sliderPosition}% 100%, 0 100%)` }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={report.photo_after_url} alt={`Foto setelah penanganan ${report.title}`} className="absolute inset-0 h-full w-full object-cover" />
-                    <span className="absolute left-4 top-4 rounded-full bg-black/60 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur">Sesudah</span>
+                    <span className="absolute left-4 top-4 rounded-full bg-black/60 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white backdrop-blur">Sesudah</span>
                   </div>
-                  <span className="absolute right-4 top-4 rounded-full bg-black/60 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur">Sebelum</span>
+                  <span className="absolute right-4 top-4 rounded-full bg-black/60 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white backdrop-blur">Sebelum</span>
                   <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 z-10 w-1 -translate-x-1/2 bg-white shadow-lg" style={{ left: `${sliderPosition}%` }}>
                     <span className="absolute left-1/2 top-1/2 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white text-outline shadow-md"><MoveHorizontal className="h-4 w-4" /></span>
                   </div>
@@ -300,13 +343,13 @@ export default function ReportDetailPage() {
 
         <section className="space-y-2">
           <div className="flex items-center justify-between gap-3">
-            <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${statusPill[report.status]}`}><CheckCircle2 className="h-4 w-4" />{STATUS_LABELS[report.status]}</span>
+            <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${statusMeta.pillClassName}`}><CheckCircle2 className="h-4 w-4" />{statusMeta.label}</span>
             <span className="text-xs text-outline">Dilaporkan {daysAgo === 0 ? "hari ini" : `${daysAgo} hari lalu`}</span>
           </div>
           <h2 className="font-heading text-[26px] font-bold leading-8 tracking-[-0.02em] text-on-surface sm:text-3xl">{report.title}</h2>
           <div className="flex flex-wrap gap-2 pt-1">
             <span className="rounded-lg bg-tertiary/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.08em] text-tertiary">{CATEGORY_LABELS[report.category]}</span>
-            <span className="flex items-center gap-1 rounded-lg bg-surface-container px-3 py-1.5 text-xs text-on-surface-variant"><MapPin className="h-4 w-4" />{report.latitude.toFixed(5)}, {report.longitude.toFixed(5)}</span>
+            <span className="flex items-center gap-1 rounded-lg bg-surface-container px-3 py-1.5 text-xs text-on-surface-variant"><MapPin className="h-4 w-4" />{locationLabel}</span>
           </div>
         </section>
 
@@ -322,7 +365,7 @@ export default function ReportDetailPage() {
                   <span className={`flex h-9 w-9 items-center justify-center rounded-full border-2 transition-colors ${completed ? "border-primary bg-primary text-primary-foreground" : "border-outline-variant bg-surface text-outline"} ${current ? "ring-4 ring-primary/15" : ""}`}>
                     {completed ? <Check className="h-4 w-4" /> : <Clock3 className="h-4 w-4" />}
                   </span>
-                  <span className={`text-[10px] leading-tight sm:text-xs ${completed ? "font-semibold text-primary" : "text-outline"}`}>{step.label}</span>
+                  <span className={`text-xs leading-tight ${completed ? "font-semibold text-primary" : "text-outline"}`}>{STATUS_META[step.status].label}</span>
                 </div>
               );
             })}
@@ -339,7 +382,7 @@ export default function ReportDetailPage() {
         <section className="space-y-2">
           <h3 className="font-heading text-xl font-semibold">Peta Lokasi</h3>
           <div className="h-48 overflow-hidden rounded-xl border border-surface-highest bg-surface-container shadow-sm">
-            <MapView reports={[report]} center={[report.latitude, report.longitude]} zoom={16} viewMode="marker" />
+            <MapView reports={[report]} center={[report.latitude, report.longitude]} zoom={16} viewMode="pin" />
           </div>
         </section>
 
@@ -349,6 +392,69 @@ export default function ReportDetailPage() {
             {report.vote_count ?? 0} DUKUNGAN
           </Button>
           <p className="max-w-xs text-xs leading-4 text-outline">{hasVoted ? "Anda sudah menandai laporan ini sebagai prioritas." : "Dukung agar laporan ini mendapat prioritas penanganan."}</p>
+        </section>
+
+        {/* Unseen: persepsi warga terhadap area laporan */}
+        <section className="space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="flex items-center gap-2 font-heading text-xl font-semibold">
+              <Eye className="h-5 w-5 text-primary" />
+              Unseen
+            </h3>
+            <span className="text-xs tabular-nums text-outline">{perceptions.length} respons</span>
+          </div>
+          <p className="text-xs text-outline">Bagaimana warga merasakan area ini?</p>
+
+          <div className="rounded-xl border border-outline-variant/35 bg-surface-lowest p-4 shadow-[0_8px_30px_rgba(0,83,91,0.14)] backdrop-blur-md">
+            {perceptionsLoading ? (
+              <div className="space-y-3" aria-label="Memuat persepsi">
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-1.5 w-full rounded-full" />
+                <Skeleton className="h-1.5 w-full rounded-full" />
+                <Skeleton className="h-1.5 w-full rounded-full" />
+              </div>
+            ) : perceptionsError ? (
+              <p className="text-xs text-outline">Data persepsi tidak tersedia saat ini.</p>
+            ) : (
+              <div className="space-y-4">
+                {perceptions.length < PERCEPTION_MIN_SAMPLE && (
+                  <p className="text-xs leading-relaxed text-on-surface-variant">
+                    Belum cukup respons untuk melihat pola. {perceptions.length} respons sejauh ini.
+                  </p>
+                )}
+
+                <div className="space-y-3">
+                  {PERCEPTION_SENTIMENTS.map((sentiment) => {
+                    const count = perceptions.filter((item) => item.sentiment === sentiment).length;
+                    const percentage = perceptions.length > 0 ? Math.round((count / perceptions.length) * 100) : 0;
+                    return (
+                      <div key={sentiment} className="space-y-1.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-medium text-on-surface-variant">{PERCEPTION_SENTIMENT_LABELS[sentiment].label}</span>
+                          <span className="tabular-nums text-outline">{percentage}%</span>
+                        </div>
+                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-container">
+                          <div
+                            className="h-full rounded-full transition-all"
+                            style={{ width: `${percentage}%`, backgroundColor: PERCEPTION_SENTIMENT_COLORS[sentiment] }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setPerceptionDialogOpen(true)}
+                  className="h-9 rounded-full px-3 text-xs font-medium"
+                >
+                  Bagikan pengalamanmu
+                </Button>
+              </div>
+            )}
+          </div>
         </section>
 
         {/* Hapus laporan - pemilik atau admin */}
@@ -372,7 +478,7 @@ export default function ReportDetailPage() {
               <div key={log.id} className="relative">
                 <span className={`absolute -left-[33px] top-1 h-4 w-4 rounded-full border-4 border-surface ${index === 0 ? "bg-primary ring-2 ring-primary/10" : "bg-outline-variant"}`} />
                 <div className={index === 0 ? "rounded-lg border border-surface-highest bg-surface-lowest p-3 shadow-sm" : ""}>
-                  <p className="font-medium text-on-surface">{STATUS_LABELS[log.new_status as ReportStatus] ?? log.new_status}</p>
+                  <p className="font-medium text-on-surface">{STATUS_META[log.new_status as ReportStatus]?.label ?? log.new_status}</p>
                   <p className="mt-1 text-xs text-outline">{log.changed_at ? new Date(log.changed_at).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : ""}</p>
                 </div>
               </div>
@@ -380,7 +486,7 @@ export default function ReportDetailPage() {
               <div className="relative">
                 <span className="absolute -left-[33px] top-1 h-4 w-4 rounded-full border-4 border-surface bg-primary ring-2 ring-primary/10" />
                 <div className="rounded-lg border border-surface-highest bg-surface-lowest p-3 shadow-sm">
-                  <p className="font-medium text-on-surface">{STATUS_LABELS[report.status]}</p>
+                  <p className="font-medium text-on-surface">{statusMeta.label}</p>
                   <p className="mt-1 text-xs text-outline">{reportedDate.toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</p>
                 </div>
               </div>
@@ -388,6 +494,18 @@ export default function ReportDetailPage() {
           </div>
         </section>
       </main>
+
+      {/* Dialog persepsi area */}
+      <PerceptionDialog
+        open={perceptionDialogOpen}
+        onOpenChange={setPerceptionDialogOpen}
+        latitude={report.latitude}
+        longitude={report.longitude}
+        reportId={reportId ?? undefined}
+        onSubmitted={() => {
+          queryClient.invalidateQueries({ queryKey: ["persepsi", "report", reportId] });
+        }}
+      />
 
       {/* Dialog konfirmasi hapus */}
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>

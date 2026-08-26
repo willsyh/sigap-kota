@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { REPORT_CATEGORIES, REPORT_STATUSES } from "@/lib/constants/reports";
 import type { Database } from "@/lib/supabase/types";
+import { verifyReportPhoto } from "@/lib/ai/verify-photo";
 
 const ALLOWED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_PHOTO_SIZE = 5 * 1024 * 1024; // 5MB
@@ -153,6 +154,8 @@ export async function POST(request: NextRequest) {
       latitude,
       longitude,
       photo_url: photoUrl,
+      ai_verdict: "unsure",
+      ai_reason: null,
     })
     .select()
     .single();
@@ -162,6 +165,26 @@ export async function POST(request: NextRequest) {
       { error: "Gagal menyimpan laporan" },
       { status: 500 },
     );
+  }
+
+  // Verifikasi AI foto-vs-teks. Tidak memblokir insert: kalau gagal/tidak
+  // ada foto, verdict tetap "unsure" (nilai default di DB). Hasil disimpan
+  // ke kolom ai_verdict/ai_reason untuk ditampilkan di halaman admin.
+  if (photo instanceof File && photo.size > 0) {
+    void (async () => {
+      try {
+        const result = await verifyReportPhoto(photo, title, description);
+        await createAdminClient()
+          .from("reports")
+          .update({
+            ai_verdict: result.verdict,
+            ai_reason: result.reason || null,
+          })
+          .eq("id", data.id);
+      } catch {
+        // diam: verifikasi gagal, kolom tetap "unsure".
+      }
+    })();
   }
 
   return NextResponse.json(data, { status: 201 });
