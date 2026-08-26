@@ -223,9 +223,27 @@ function MapViewController({
 
 // Helper to create status-colored HTML markers.
 // Semantic colors per DESIGN.md: dilaporkan = neutral gray,
-// diproses/menunggu_konfirmasi = amber, selesai = green with a check glyph
-// so resolved reports visibly demonstrate the response loop on the map.
-function createCustomIcon(status: Report["status"], isSelected: boolean) {
+// diproses/menunggu_konfirmasi = amber, selesai = green.
+// Each pin carries a category glyph (Lucide path data) so reports are
+// recognizable by shape as well as color.
+const CATEGORY_GLYPHS: Record<Report["category"], string> = {
+  jalan_rusak:
+    '<rect x="2" y="6" width="20" height="8" rx="1"/><path d="M17 14v7"/><path d="M7 14v7"/><path d="M17 3v3"/><path d="M7 3v3"/><path d="M10 14 2.3 6.3"/><path d="m14 6 7.7 7.7"/><path d="m8 6 8 8"/>',
+  sampah:
+    '<path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  banjir:
+    '<path d="M2 12q2.5 2 5 0t5 0 5 0 5 0"/><path d="M2 19q2.5 2 5 0t5 0 5 0 5 0"/><path d="M2 5q2.5 2 5 0t5 0 5 0 5 0"/>',
+  fasilitas_umum:
+    '<path d="M10 18v-7"/><path d="M11.119 2.205a2 2 0 0 1 1.762 0l7.84 3.846A.5.5 0 0 1 20.5 7h-17a.5.5 0 0 1-.22-.949z"/><path d="M14 18v-7"/><path d="M18 18v-7"/><path d="M3 22h18"/><path d="M6 18v-7"/>',
+  lainnya:
+    '<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>',
+};
+
+function createCustomIcon(
+  status: Report["status"],
+  category: Report["category"],
+  isSelected: boolean,
+) {
   const colorByStatus: Record<Report["status"], string> = {
     dilaporkan: "#6f797a",
     diproses: "#d97706",
@@ -234,12 +252,9 @@ function createCustomIcon(status: Report["status"], isSelected: boolean) {
   };
   const color = colorByStatus[status];
   const size = isSelected ? 42 : 34;
-  const glyphSize = isSelected ? 14 : 11;
+  const glyphSize = isSelected ? 16 : 13;
 
-  const glyph =
-    status === "selesai"
-      ? `<svg viewBox="0 0 24 24" width="${glyphSize}" height="${glyphSize}" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>`
-      : `<div style="width:${glyphSize}px;height:${glyphSize}px;border:2px solid white;border-radius:9999px;"></div>`;
+  const glyph = `<svg viewBox="0 0 24 24" width="${glyphSize}" height="${glyphSize}" fill="none" stroke="#ffffff" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${CATEGORY_GLYPHS[category]}</svg>`;
 
   const html = `
     <div style="position:relative;width:${size}px;height:${size + 8}px;filter:drop-shadow(0 4px 5px rgba(17,28,44,.24));">
@@ -317,7 +332,7 @@ export default function MapComponent({
         ) : (
           reports.map((report) => {
             const isSelected = report.id === selectedReportId;
-            const icon = createCustomIcon(report.status, isSelected);
+            const icon = createCustomIcon(report.status, report.category, isSelected);
 
             return (
               <Marker
