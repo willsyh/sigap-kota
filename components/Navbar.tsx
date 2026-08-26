@@ -4,13 +4,13 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  CircleHelp,
   CirclePlus,
   FileText,
   Layers3,
   LogIn,
   LogOut,
   Map,
-  Menu,
   ShieldCheck,
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
@@ -53,6 +53,7 @@ export default function Navbar({ viewMode, onViewModeToggle }: NavbarProps) {
   const navItems = [
     { href: "/", label: "Peta", icon: Map },
     { href: "/laporan", label: "Laporan", icon: FileText },
+    { href: "/panduan", label: "Panduan", icon: CircleHelp },
     ...(isAdmin
       ? [{ href: "/admin", label: "Admin", icon: ShieldCheck }]
       : []),
@@ -62,11 +63,15 @@ export default function Navbar({ viewMode, onViewModeToggle }: NavbarProps) {
     <header className="sticky top-0 z-50 h-16 w-full border-b border-outline-variant/25 bg-surface/96 shadow-sm backdrop-blur-md">
       <div className="relative mx-auto flex h-full w-full max-w-7xl items-center justify-between px-4 md:px-6">
         <Link
-          href="/laporan"
-          aria-label="Buka daftar laporan"
-          className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full text-on-surface-variant transition-colors duration-150 ease-out hover:bg-surface-container active:scale-[0.95] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+          href="/panduan"
+          aria-label="Buka panduan penggunaan"
+          aria-current={pathname.startsWith("/panduan") ? "page" : undefined}
+          className={cn(
+            "flex h-11 w-11 cursor-pointer items-center justify-center rounded-full transition-colors duration-150 ease-out hover:bg-surface-container active:scale-[0.95] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden",
+            pathname.startsWith("/panduan") ? "bg-primary/10 text-primary" : "text-on-surface-variant",
+          )}
         >
-          <Menu className="h-6 w-6" />
+          <CircleHelp className="h-6 w-6" />
         </Link>
 
         <div className="flex items-center gap-8">

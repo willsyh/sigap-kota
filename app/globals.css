@@ -81,6 +81,9 @@
        (#bec8ca). Do NOT use --outline-variant for readable text; it
        fails WCAG AA on light surfaces by design (it is a border token).
      ------------------------------------------------------------------ */
+  --font-geist-sans: "Segoe UI", Arial, Helvetica, sans-serif;
+  --font-geist-mono: "Cascadia Mono", "Segoe UI Mono", Consolas, monospace;
+  --font-hanken: "Segoe UI", Arial, Helvetica, sans-serif;
   --surface: #f9f9ff;
   --surface-lowest: #ffffff;
   --surface-low: #f0f3ff;
