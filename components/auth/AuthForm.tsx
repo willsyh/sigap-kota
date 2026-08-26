@@ -19,20 +19,26 @@ interface AuthFormProps {
 const GENERIC_AUTH_ERROR = "Terjadi kesalahan. Coba lagi sebentar.";
 
 function mapAuthErrorMessage(error: unknown): string {
-  if (!(error instanceof AuthError)) return GENERIC_AUTH_ERROR;
-  switch (error.code) {
-    case "invalid_credentials": return "Email atau kata sandi salah.";
-    case "email_not_confirmed": return "Email belum dikonfirmasi. Cek kotak masuk Anda.";
-    case "user_already_exists": return "Email sudah terdaftar. Silakan masuk.";
-    case "weak_password": return "Kata sandi terlalu lemah. Gunakan minimal 6 karakter.";
-    case "over_request_rate_limit":
-    case "over_email_send_rate_limit": return "Terlalu banyak percobaan. Coba lagi nanti.";
+  if (error instanceof AuthError) {
+    switch (error.code) {
+      case "invalid_credentials": return "Email atau kata sandi salah.";
+      case "email_not_confirmed": return "Email belum dikonfirmasi. Cek kotak masuk Anda.";
+      case "user_already_exists": return "Email sudah terdaftar. Silakan masuk.";
+      case "weak_password": return "Kata sandi terlalu lemah. Gunakan minimal 6 karakter.";
+      case "over_request_rate_limit":
+      case "over_email_send_rate_limit": return "Terlalu banyak percobaan. Coba lagi nanti.";
+      default: {
+        const msg = error.message.toLowerCase();
+        if (msg.includes("invalid login credentials")) return "Email atau kata sandi salah.";
+        if (msg.includes("email not confirmed")) return "Email belum dikonfirmasi. Cek kotak masuk Anda.";
+        if (msg.includes("already registered") || msg.includes("already exists")) return "Email sudah terdaftar. Silakan masuk.";
+        if (msg.includes("rate limit")) return "Terlalu banyak percobaan. Coba lagi nanti.";
+        return `${GENERIC_AUTH_ERROR} (${error.code ?? "unknown"})`;
+      }
+    }
   }
-  const message = error.message.toLowerCase();
-  if (message.includes("invalid login credentials")) return "Email atau kata sandi salah.";
-  if (message.includes("email not confirmed")) return "Email belum dikonfirmasi. Cek kotak masuk Anda.";
-  if (message.includes("already registered") || message.includes("already exists")) return "Email sudah terdaftar. Silakan masuk.";
-  if (message.includes("rate limit")) return "Terlalu banyak percobaan. Coba lagi nanti.";
+  if (error instanceof TypeError) return "Gagal terhubung ke server. Periksa koneksi internet Anda.";
+  if (error instanceof Error) return `${GENERIC_AUTH_ERROR} — ${error.message}`;
   return GENERIC_AUTH_ERROR;
 }
 
@@ -80,6 +86,7 @@ export default function AuthForm({ mode, nextPath }: AuthFormProps) {
         router.refresh();
       }
     } catch (authError) {
+      console.error("[auth] unexpected error:", authError);
       setError(mapAuthErrorMessage(authError));
     } finally {
       setLoading(false);
@@ -149,7 +156,7 @@ export default function AuthForm({ mode, nextPath }: AuthFormProps) {
           </div>
         </div>
 
-        {error && <p className="anim-slide-down rounded-lg bg-error-container px-3 py-2 text-xs text-on-error-container" role="alert">{error}</p>}
+        {error && <p className="anim-slide-down rounded-lg bg-error-container px-3 py-2 text-xs text-on-error-container break-all" role="alert">{error}</p>}
         {info && <p className="anim-slide-down rounded-lg bg-tertiary/10 px-3 py-2 text-xs text-tertiary" role="status">{info}</p>}
 
         <Button
