@@ -97,7 +97,7 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState<ReportCategory | "all">("all");
   const [selectedStatus, setSelectedStatus] = useState<ReportStatus | "all">("all");
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
-  const [viewMode, setViewMode] = useState<"marker" | "heatmap" | "unseen">("marker");
+  const [viewMode, setViewMode] = useState<"pin" | "heatmap" | "unseen">("pin");
   const [query, setQuery] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [days, setDays] = useState<7 | 30>(7);
@@ -135,7 +135,7 @@ export default function Home() {
   // terlihat jelas (heatmap membuat hasil pencarian sulit dinilai).
   const handleQueryChange = useCallback((next: string) => {
     setQuery(next);
-    if (next.trim()) setViewMode("marker");
+    if (next.trim()) setViewMode("pin");
   }, []);
 
   // Filter reports based on active selection.
@@ -205,8 +205,6 @@ export default function Home() {
 
   const handleClosePreview = useCallback(() => setSelectedReport(null), []);
 
-  const handleSwitchToMarker = useCallback(() => setViewMode("marker"), []);
-
   const handleMapClick = useCallback((lat: number, lng: number) => {
     setDialogPoint({ lat, lng });
   }, []);
@@ -234,7 +232,7 @@ export default function Home() {
       <Navbar
         viewMode={viewMode}
         onViewModeToggle={() =>
-          setViewMode((mode) => (mode === "marker" ? "heatmap" : "marker"))
+          setViewMode((mode) => (mode === "heatmap" ? "pin" : "heatmap"))
         }
       />
 
@@ -292,7 +290,7 @@ export default function Home() {
               }
               zoom={visibleSelectedReport ? SELECTED_REPORT_ZOOM : DEFAULT_ZOOM}
               viewMode={viewMode}
-              onSwitchToMarker={handleSwitchToMarker}
+              onSwitchToPin={() => setViewMode("pin")}
               perceptions={perceptions}
               onMapClick={handleMapClick}
             />
@@ -422,7 +420,7 @@ export default function Home() {
           )}
 
           {/* Legenda warna pin (hanya relevan pada mode pin) */}
-          {!isLoading && !isError && viewMode === "marker" && <MapLegend />}
+          {!isLoading && !isError && viewMode === "pin" && <MapLegend />}
 
           {/* Mode unseen: legenda persepsi + status muat/kosong */}
           {!isLoading && !isError && viewMode === "unseen" && (

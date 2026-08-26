@@ -5,6 +5,11 @@ import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-lea
 import L from "leaflet";
 import type { LatLngExpression } from "leaflet";
 
+if (typeof window !== "undefined") {
+  const w = window as unknown as { L?: unknown };
+  if (!w.L) w.L = L;
+}
+
 import {
   OPENSTREETMAP_ATTRIBUTION,
   OPENSTREETMAP_TILE_URL,
@@ -16,7 +21,7 @@ interface LocationPickerMapProps {
   onChange: (lat: number, lng: number) => void;
 }
 
-const pickerIcon = L.divIcon({
+const pickerIcon = typeof window !== "undefined" ? L.divIcon({
   html: `
     <div style="
       width: 30px;
@@ -36,13 +41,51 @@ const pickerIcon = L.divIcon({
   className: "custom-leaflet-marker",
   iconSize: [30, 30],
   iconAnchor: [15, 15],
-});
+}) : null;
+
+function InvalidateOnResize() {
+  const map = useMap();
+  useEffect(() => {
+    const container = map.getContainer();
+    const ro = new ResizeObserver(() => {
+      map.invalidateSize();
+    });
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, [map]);
+  return null;
+}
 
 function Recenter({ lat, lng }: { lat: number; lng: number }) {
   const map = useMap();
+  const prevCoords = useRef({ lat, lng });
+  const isUserAdjusting = useRef(false);
+
+  useMapEvents({
+    click() {
+      isUserAdjusting.current = true;
+    },
+    dragstart() {
+      isUserAdjusting.current = true;
+    },
+    movestart() {
+      // Catch zoom changes or manual pans to prevent resets
+      isUserAdjusting.current = true;
+    }
+  });
 
   useEffect(() => {
-    map.setView([lat, lng]);
+    if (prevCoords.current.lat !== lat || prevCoords.current.lng !== lng) {
+      if (!isUserAdjusting.current) {
+        map.setView([lat, lng]);
+      }
+      prevCoords.current = { lat, lng };
+    }
+    // Delay resetting user control state to clear events in the queue
+    const timer = setTimeout(() => {
+      isUserAdjusting.current = false;
+    }, 50);
+    return () => clearTimeout(timer);
   }, [lat, lng, map]);
 
   return null;
@@ -80,9 +123,10 @@ export default function LocationPickerMap({
         />
         <Recenter lat={lat} lng={lng} />
         <ClickHandler onChange={onChange} />
+        <InvalidateOnResize />
         <Marker
           position={[lat, lng] as LatLngExpression}
-          icon={pickerIcon}
+          icon={pickerIcon || undefined}
           draggable={true}
           ref={markerRef}
           eventHandlers={{

@@ -321,17 +321,11 @@
   /* Marker peta: hover scale memakai properti CSS individual `scale`
      sehingga TIDAK menimpa transform posisi translate3d milik Leaflet.
      Transition-only, tidak ada animasi saat zoom/scroll. */
+  /* Marker peta tidak dipakai efek transform/scale pada hover: scale
+     membuat ujung pin berpindah dari koordinat aslinya saat kursor
+     mendekat. Pin harus tetap diam persis di lat/lng laporan. */
   .custom-leaflet-marker {
-    transition: scale 150ms ease-out;
-    /* Scale around the pin tip (the Leaflet iconAnchor) so the marker
-       stays anchored to its location and does not shift on hover.
-       Scaling from the default center also causes a hover/unhover
-       flicker loop when the cursor is near the bounding-box edge. */
-    transform-origin: 50% 100%;
-  }
-
-  .custom-leaflet-marker:hover {
-    scale: 1.08;
+    cursor: pointer;
   }
 }
 

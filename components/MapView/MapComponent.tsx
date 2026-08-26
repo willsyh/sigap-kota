@@ -30,8 +30,8 @@ interface MapComponentProps {
   onSelectReport?: (report: Report) => void;
   center?: [number, number];
   zoom?: number;
-  viewMode?: "marker" | "heatmap" | "unseen";
-  onSwitchToMarker?: () => void;
+  viewMode?: "pin" | "heatmap" | "unseen";
+  onSwitchToPin?: () => void;
   perceptions?: PerceptionPoint[];
   onMapClick?: (lat: number, lng: number) => void;
 }
@@ -40,8 +40,18 @@ interface MapComponentProps {
 // this zoom; reaching it hands control over to the marker view.
 const HEATMAP_MAX_ZOOM = 16;
 
-// B08: Heatmap Layer Component using leaflet.heat with click-to-zoom
-function HeatmapLayer({ reports, onSwitchToMarker }: { reports: Report[]; onSwitchToMarker?: () => void }) {
+// B08: Heatmap Layer Component using leaflet.heat with click-to-zoom.
+// Klik di area heatmap hanya melakukan flyTo zoom-in (predictable), TIDAK
+// mengubah viewMode. Transisi antar mode sepenuhnya diatur dari navbar.
+function HeatmapLayer({
+  reports,
+  onSelectReport,
+  onSwitchToPin,
+}: {
+  reports: Report[];
+  onSelectReport?: (report: Report) => void;
+  onSwitchToPin?: () => void;
+}) {
   const map = useMap();
   const [, forceUpdate] = useState(0);
 
@@ -100,23 +110,34 @@ function HeatmapLayer({ reports, onSwitchToMarker }: { reports: Report[]; onSwit
     map.on("zoomend", syncIntensity);
     map.on("moveend", syncIntensity);
 
-    const handleMapClick = (e: L.LeafletMouseEvent) => {
-      // Zoom in toward the clicked hotspot, capped so the flight stays
-      // readable; only once fully zoomed in do we hand over to pin view.
-      // Never fly outward: if the user already hand-zoomed past the cap,
-      // hand over to pin view without moving the viewport.
-      const currentZoom = map.getZoom();
-      if (currentZoom >= HEATMAP_MAX_ZOOM) {
-        if (onSwitchToMarker) {
-          onSwitchToMarker();
+    // Cari laporan terdekat dari suatu titik (euclidean lat/lng cukup untuk
+    // memilih laporan saat zoom detail; semua laporan dalam radius dekat).
+    const nearestReport = (lat: number, lng: number): Report | undefined => {
+      let best: Report | undefined;
+      let bestDist = Infinity;
+      for (const r of reports) {
+        const d = (r.latitude - lat) ** 2 + (r.longitude - lng) ** 2;
+        if (d < bestDist) {
+          bestDist = d;
+          best = r;
         }
+      }
+      return best;
+    };
+
+    const handleMapClick = (e: L.LeafletMouseEvent) => {
+      const currentZoom = map.getZoom();
+      // Sudah di zoom maksimal: buka laporan terdekat lalu pindah ke mode Pin
+      // agar user langsung melihat pin & detail laporan di titik tersebut.
+      if (currentZoom >= HEATMAP_MAX_ZOOM) {
+        const nearest = nearestReport(e.latlng.lat, e.latlng.lng);
+        if (nearest) onSelectReport?.(nearest);
+        onSwitchToPin?.();
         return;
       }
+      // Masih bisa zoom: perbesar bertahap ke arah titik yang diklik.
       const newZoom = Math.min(currentZoom + 2, HEATMAP_MAX_ZOOM);
       map.flyTo(e.latlng, newZoom, { animate: true });
-      if (newZoom >= HEATMAP_MAX_ZOOM && onSwitchToMarker) {
-        onSwitchToMarker();
-      }
     };
 
     map.on("click", handleMapClick);
@@ -127,9 +148,42 @@ function HeatmapLayer({ reports, onSwitchToMarker }: { reports: Report[]; onSwit
       map.off("moveend", syncIntensity);
       map.removeLayer(heatLayer);
     };
-  }, [map, reports, onSwitchToMarker]);
+  }, [map, reports, onSelectReport, onSwitchToPin]);
 
   return null;
+}
+
+// Pin Layer: render satu marker biasa per laporan, TANPA agregasi/density
+// dari heatmap. Koordinat diambil LANGSUNG dari data asli reports.
+function PinLayer({
+  reports,
+  selectedReportId,
+  onSelectReport,
+}: {
+  reports: Report[];
+  selectedReportId?: string | null;
+  onSelectReport?: (report: Report) => void;
+}) {
+  return (
+    <>
+      {reports.map((report) => {
+        const isSelected = report.id === selectedReportId;
+        const icon = getReportIcon(report.status, report.category, isSelected);
+
+        return (
+          <Marker
+            key={report.id}
+            position={[report.latitude, report.longitude]}
+            icon={icon}
+            title={report.title}
+            eventHandlers={{
+              click: () => onSelectReport?.(report),
+            }}
+          />
+        );
+      })}
+    </>
+  );
 }
 
 // Unseen Layer: titik persepsi warga di mode "unseen". Klik pada peta
@@ -294,14 +348,32 @@ function createCustomIcon(
   });
 }
 
+// Cache ikon berdasarkan (status|category|isSelected) supaya identitas objek
+// stabil antar-render. Tanpa ini, setiap render membuat divIcon baru yang
+// memicu Leaflet setIcon() dan bisa membuat pin berkedip/bergoyang.
+const reportIconCache = new Map<string, L.DivIcon>();
+function getReportIcon(
+  status: Report["status"],
+  category: Report["category"],
+  isSelected: boolean,
+) {
+  const key = `${status}|${category}|${isSelected}`;
+  let icon = reportIconCache.get(key);
+  if (!icon) {
+    icon = createCustomIcon(status, category, isSelected);
+    reportIconCache.set(key, icon);
+  }
+  return icon;
+}
+
 export default function MapComponent({
   reports,
   selectedReportId,
   onSelectReport,
   center = [-6.3458, 106.7394], // Pamulang default
   zoom = 13,
-  viewMode = "marker",
-  onSwitchToMarker,
+  viewMode = "pin",
+  onSwitchToPin,
   perceptions = [],
   onMapClick,
 }: MapComponentProps) {
@@ -326,26 +398,19 @@ export default function MapComponent({
         <MapViewController center={center} zoom={zoom} selectedReportId={selectedReportId} />
 
         {viewMode === "heatmap" ? (
-          <HeatmapLayer reports={reports} onSwitchToMarker={onSwitchToMarker} />
+          <HeatmapLayer
+            reports={reports}
+            onSelectReport={onSelectReport}
+            onSwitchToPin={onSwitchToPin}
+          />
         ) : viewMode === "unseen" ? (
           <UnseenLayer perceptions={perceptions} onMapClick={onMapClick} />
         ) : (
-          reports.map((report) => {
-            const isSelected = report.id === selectedReportId;
-            const icon = createCustomIcon(report.status, report.category, isSelected);
-
-            return (
-              <Marker
-                key={report.id}
-                position={[report.latitude, report.longitude]}
-                icon={icon}
-                title={report.title}
-                eventHandlers={{
-                  click: () => onSelectReport?.(report),
-                }}
-              />
-            );
-          })
+          <PinLayer
+            reports={reports}
+            selectedReportId={selectedReportId}
+            onSelectReport={onSelectReport}
+          />
         )}
       </MapContainer>
     </div>

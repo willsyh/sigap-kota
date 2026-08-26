@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Filter, Flame, RotateCcw, Search, X, Eye } from "lucide-react";
+import { Filter, Flame, MapPin, RotateCcw, Search, X, Eye } from "lucide-react";
 
 import { CATEGORY_LABELS, REPORT_CATEGORIES, REPORT_STATUSES, STATUS_LABELS } from "@/lib/constants/reports";
 import type { Report, ReportCategory, ReportStatus } from "@/lib/types";
@@ -23,8 +23,8 @@ interface HomeMapControlsProps {
   onCategoryChange: (category: ReportCategory | "all") => void;
   onStatusChange: (status: ReportStatus | "all") => void;
   onReset: () => void;
-  viewMode: "marker" | "heatmap" | "unseen";
-  onViewModeChange: (mode: "marker" | "heatmap" | "unseen") => void;
+  viewMode: "pin" | "heatmap" | "unseen";
+  onViewModeChange: (mode: "pin" | "heatmap" | "unseen") => void;
   showDaysFilter?: boolean;
   days?: 7 | 30;
   onDaysChange?: (days: 7 | 30) => void;
@@ -161,12 +161,27 @@ export default function HomeMapControls({
 
             <button
               type="button"
+              aria-pressed={viewMode === "pin"}
+              onClick={() => onViewModeChange("pin")}
+              className={cn(
+                "ml-auto flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                viewMode === "pin"
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-outline-variant/70 bg-surface-lowest/90 text-on-surface-variant hover:border-outline-variant hover:text-primary",
+              )}
+            >
+              <MapPin className="h-3.5 w-3.5" />
+              Pin
+            </button>
+
+            <button
+              type="button"
               aria-pressed={viewMode === "heatmap"}
               onClick={() =>
-                onViewModeChange(viewMode === "heatmap" ? "marker" : "heatmap")
+                onViewModeChange(viewMode === "heatmap" ? "pin" : "heatmap")
               }
               className={cn(
-                "ml-auto flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-all duration-150 ease-out active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-all duration-150 ease-out active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 viewMode === "heatmap"
                   ? "border-primary bg-primary/10 text-primary"
                   : "border-outline-variant/70 bg-surface-lowest/90 text-on-surface-variant hover:border-outline-variant hover:text-primary",
@@ -180,7 +195,7 @@ export default function HomeMapControls({
               type="button"
               aria-pressed={viewMode === "unseen"}
               onClick={() =>
-                onViewModeChange(viewMode === "unseen" ? "marker" : "unseen")
+                onViewModeChange(viewMode === "unseen" ? "pin" : "unseen")
               }
               className={cn(
                 "flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",

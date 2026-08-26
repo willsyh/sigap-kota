@@ -382,7 +382,7 @@ export default function ReportDetailPage() {
         <section className="space-y-2">
           <h3 className="font-heading text-xl font-semibold">Peta Lokasi</h3>
           <div className="h-48 overflow-hidden rounded-xl border border-surface-highest bg-surface-container shadow-sm">
-            <MapView reports={[report]} center={[report.latitude, report.longitude]} zoom={16} viewMode="marker" />
+            <MapView reports={[report]} center={[report.latitude, report.longitude]} zoom={16} viewMode="pin" />
           </div>
         </section>
 

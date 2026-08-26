@@ -20,7 +20,7 @@ import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 interface NavbarProps {
-  viewMode?: "marker" | "heatmap" | "unseen";
+  viewMode?: "pin" | "heatmap" | "unseen";
   onViewModeToggle?: () => void;
 }
 
@@ -147,7 +147,7 @@ export default function Navbar({ viewMode, onViewModeToggle }: NavbarProps) {
           <button
             type="button"
             onClick={onViewModeToggle}
-            aria-label={viewMode === "marker" ? "Tampilkan heatmap" : "Tampilkan pin laporan"}
+            aria-label={viewMode === "heatmap" ? "Tampilkan pin laporan" : "Tampilkan heatmap"}
             aria-pressed={viewMode === "heatmap"}
             className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full text-on-surface-variant transition-colors duration-150 ease-out hover:bg-surface-container hover:text-primary active:scale-[0.95] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
           >

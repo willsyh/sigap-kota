@@ -11,8 +11,8 @@ interface MapViewProps {
   onSelectReport?: (report: Report) => void;
   center?: [number, number];
   zoom?: number;
-  viewMode?: "marker" | "heatmap" | "unseen";
-  onSwitchToMarker?: () => void;
+  viewMode?: "pin" | "heatmap" | "unseen";
+  onSwitchToPin?: () => void;
   perceptions?: PerceptionPoint[];
   onMapClick?: (lat: number, lng: number) => void;
 }
