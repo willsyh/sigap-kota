@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { after } from "next/server";
 import { randomUUID } from "crypto";
 
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -170,8 +171,11 @@ export async function POST(request: NextRequest) {
   // Verifikasi AI foto-vs-teks. Tidak memblokir insert: kalau gagal/tidak
   // ada foto, verdict tetap "unsure" (nilai default di DB). Hasil disimpan
   // ke kolom ai_verdict/ai_reason untuk ditampilkan di halaman admin.
+  // Pakai after() agar Vercel tidak kill background task sebelum selesai
+  // (Hobby limit 10s — after() minta runtime tunggu task ini walau response
+  // sudah dikirim).
   if (photo instanceof File && photo.size > 0) {
-    void (async () => {
+    after(async () => {
       try {
         const result = await verifyReportPhoto(photo, title, description);
         await createAdminClient()
@@ -184,7 +188,7 @@ export async function POST(request: NextRequest) {
       } catch {
         // diam: verifikasi gagal, kolom tetap "unsure".
       }
-    })();
+    });
   }
 
   return NextResponse.json(data, { status: 201 });
