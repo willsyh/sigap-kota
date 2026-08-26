@@ -8,10 +8,11 @@ import MapView from "@/components/MapView";
 import HomeMapControls from "@/components/MapView/HomeMapControls";
 import MapLegend from "@/components/MapView/MapLegend";
 import PerceptionDialog from "@/components/perceptions/PerceptionDialog";
-import PerceptionPulseCard, {
-  type PerceptionPoint,
-  type PerceptionSentiment,
+import type {
+  PerceptionPoint,
+  PerceptionSentiment,
 } from "@/components/perceptions/PerceptionPulseCard";
+import AreaPulsePopup from "@/components/perceptions/AreaPulsePopup";
 import {
   CATEGORY_LABELS,
   STATUS_LABELS,
@@ -102,6 +103,7 @@ export default function Home() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [days, setDays] = useState<7 | 30>(7);
   const [dialogPoint, setDialogPoint] = useState<{ lat: number; lng: number } | null>(null);
+  const [pulsePoint, setPulsePoint] = useState<{ lat: number; lng: number } | null>(null);
 
   // Data persepsi hanya diambil saat mode unseen aktif.
   const {
@@ -210,10 +212,19 @@ export default function Home() {
   const handleClosePreview = useCallback(() => setSelectedReport(null), []);
 
   const handleMapClick = useCallback((lat: number, lng: number) => {
-    setDialogPoint({ lat, lng });
+    setPulsePoint({ lat, lng });
   }, []);
 
   const handleCloseDialog = useCallback(() => setDialogPoint(null), []);
+
+  const handleClosePulse = useCallback(() => setPulsePoint(null), []);
+
+  const handleOpenDialogFromPulse = useCallback(() => {
+    if (pulsePoint) {
+      setDialogPoint(pulsePoint);
+      setPulsePoint(null);
+    }
+  }, [pulsePoint]);
 
   const handlePerceptionSubmitted = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ["persepsi"] });
@@ -335,7 +346,7 @@ export default function Home() {
                   type="button"
                   aria-label="Tutup pengantar"
                   onClick={dismissIntro}
-                  className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-outline transition-colors hover:bg-surface-container hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-outline transition-all duration-150 ease-out hover:bg-surface-container hover:text-primary active:scale-[0.95] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -468,12 +479,15 @@ export default function Home() {
             )}
 
           {/* Ringkasan pulse di sekitar titik yang diketuk pengguna */}
-          {!isLoading && !isError && viewMode === "unseen" && dialogPoint && (
+          {!isLoading && !isError && viewMode === "unseen" && pulsePoint && (
             <div className="absolute bottom-5 left-4 z-30 md:bottom-8 md:left-8">
-              <PerceptionPulseCard
+              <AreaPulsePopup
                 perceptions={perceptions}
-                latitude={dialogPoint.lat}
-                longitude={dialogPoint.lng}
+                reports={filteredReports}
+                latitude={pulsePoint.lat}
+                longitude={pulsePoint.lng}
+                onOpenDialog={handleOpenDialogFromPulse}
+                onClose={handleClosePulse}
               />
             </div>
           )}
@@ -539,7 +553,7 @@ export default function Home() {
                   type="button"
                   aria-label="Tutup pratinjau"
                   onClick={handleClosePreview}
-                  className="absolute right-0 top-0 flex h-11 w-11 cursor-pointer items-center justify-center rounded-full text-outline transition-colors hover:bg-surface-container hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="absolute right-0 top-0 flex h-11 w-11 cursor-pointer items-center justify-center rounded-full text-outline transition-all duration-150 ease-out hover:bg-surface-container hover:text-primary active:scale-[0.95] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <X className="h-4 w-4" />
                 </button>

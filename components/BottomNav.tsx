@@ -185,7 +185,7 @@ export default function BottomNav() {
               >
                 <Icon className="h-6 w-6" strokeWidth={tab.isActive ? 2.4 : 2} />
                 {tab.hasNotification && (
-                  <span className="absolute right-1.5 top-0.5 h-2.5 w-2.5 rounded-full border-2 border-surface bg-destructive" />
+                  <span className="anim-pop absolute right-1.5 top-0.5 h-2.5 w-2.5 rounded-full border-2 border-surface bg-destructive" />
                 )}
               </span>
               {tab.label}

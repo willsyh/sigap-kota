@@ -142,15 +142,15 @@ export default function AuthForm({ mode, nextPath }: AuthFormProps) {
               aria-label={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
               aria-pressed={showPassword}
               title={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
-              className="absolute right-0.5 top-1/2 flex h-11 w-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-outline transition-colors hover:bg-primary/5 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              className="absolute right-0.5 top-1/2 flex h-11 w-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-outline transition-all duration-150 ease-out hover:bg-primary/5 hover:text-primary active:scale-[0.95] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             >
               {showPassword ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
             </button>
           </div>
         </div>
 
-        {error && <p className="anim-fade-in rounded-lg bg-error-container px-3 py-2 text-xs text-on-error-container" role="alert">{error}</p>}
-        {info && <p className="anim-fade-in rounded-lg bg-tertiary/10 px-3 py-2 text-xs text-tertiary" role="status">{info}</p>}
+        {error && <p className="anim-slide-down rounded-lg bg-error-container px-3 py-2 text-xs text-on-error-container" role="alert">{error}</p>}
+        {info && <p className="anim-slide-down rounded-lg bg-tertiary/10 px-3 py-2 text-xs text-tertiary" role="status">{info}</p>}
 
         <Button
           type="submit"
@@ -159,7 +159,7 @@ export default function AuthForm({ mode, nextPath }: AuthFormProps) {
           aria-busy={loading}
         >
           {success ? (
-            <CheckCircle2 className="anim-scale-in h-4 w-4" aria-hidden="true" />
+            <CheckCircle2 className="anim-check-in h-4 w-4" aria-hidden="true" />
           ) : loading ? (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
           ) : null}

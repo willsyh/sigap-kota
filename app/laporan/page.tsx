@@ -161,7 +161,7 @@ export default function LaporanPage() {
           </div>
 
           {advancedOpen && (
-            <div className="anim-scale-in mt-3 grid gap-3 rounded-xl border border-outline-variant/40 bg-surface-lowest p-3 shadow-lg sm:grid-cols-[180px_160px_auto] sm:items-end">
+            <div className="anim-slide-down mt-3 grid gap-3 rounded-xl border border-outline-variant/40 bg-surface-lowest p-3 shadow-lg sm:grid-cols-[180px_160px_auto] sm:items-end">
               <div className="space-y-1.5">
                 <label htmlFor="filter-kategori" className="text-xs font-semibold text-outline">Kategori</label>
                 <Select value={category} onValueChange={(value) => setCategory(value as ReportCategory | "all")}>

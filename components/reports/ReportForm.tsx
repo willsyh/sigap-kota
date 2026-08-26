@@ -469,7 +469,7 @@ export default function ReportForm() {
     <form onSubmit={handleSubmit} className="space-y-5 pb-32">
       {/* Duplicate detection banner */}
       {checkingDuplicates && candidates.length === 0 && (
-        <div className="anim-fade-in flex items-center gap-2 rounded-xl border border-outline-variant/30 bg-surface-low px-4 py-3">
+        <div className="anim-slide-down flex items-center gap-2 rounded-xl border border-outline-variant/30 bg-surface-low px-4 py-3">
           <Loader2 className="h-4 w-4 animate-spin text-primary" />
           <span className="text-xs font-medium text-on-surface-variant">Memeriksa laporan serupa di sekitar lokasi...</span>
         </div>
@@ -599,7 +599,7 @@ export default function ReportForm() {
                 className={`relative flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 p-3.5 text-center transition-all duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${active ? "border-primary bg-primary/5 shadow-sm" : "border-outline-variant/40 bg-surface-low hover:border-outline-variant hover:bg-surface-container"}`}
               >
                 {active && (
-                  <span className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-white">
+                  <span className="anim-check-in absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-white">
                     <Check className="h-3 w-3" />
                   </span>
                 )}

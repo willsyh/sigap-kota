@@ -108,6 +108,19 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const photoUrlRaw = payload.photo_url;
+  let photoUrl: string | null = null;
+  if (photoUrlRaw !== null && photoUrlRaw !== undefined && photoUrlRaw !== "") {
+    const photoUrlStr = String(photoUrlRaw);
+    if (photoUrlStr.length > 2048) {
+      return NextResponse.json(
+        { error: "URL foto terlalu panjang" },
+        { status: 400 },
+      );
+    }
+    photoUrl = photoUrlStr;
+  }
+
   const { data, error } = await supabaseAuth
     .from("perceptions")
     .insert({
@@ -117,6 +130,7 @@ export async function POST(request: NextRequest) {
       sentiment: sentiment as PerceptionSentiment,
       reason,
       note: note || null,
+      photo_url: photoUrl,
       report_id: reportId,
     })
     .select()
@@ -147,7 +161,7 @@ export async function GET(request: NextRequest) {
 
   let query = supabase
     .from("perceptions")
-    .select("id, latitude, longitude, sentiment, reason, report_id, created_at")
+    .select("id, latitude, longitude, sentiment, reason, photo_url, report_id, created_at")
     .order("created_at", { ascending: false })
     .limit(2000);
 
