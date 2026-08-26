@@ -131,6 +131,10 @@ export default function Home() {
   const dismissIntro = useCallback(() => introStore.write(true), []);
   const reopenIntro = useCallback(() => introStore.write(false), []);
 
+  // Mode non-pin (zona padat / unseen) butuh visibilitas peta penuh:
+  // otomatis sembunyikan kartu intro saat masuk ke mode tersebut.
+  const isIntroVisible = !introDismissed && viewMode === "pin";
+
   // Pencarian non-kosong selalu tampil dalam mode pin supaya efek filter
   // terlihat jelas (heatmap membuat hasil pencarian sulit dinilai).
   const handleQueryChange = useCallback((next: string) => {
@@ -318,7 +322,7 @@ export default function Home() {
           )}
 
           {/* Lapisan naratif: pengantar + hitungan live + bukti penanganan */}
-          {!introDismissed ? (
+          {isIntroVisible ? (
             <aside
               aria-label="Tentang SigapKota"
               className="anim-fade-up absolute left-4 top-[7.25rem] z-20 w-[calc(100%-2rem)] max-w-sm rounded-2xl border border-outline-variant/50 bg-surface-lowest/95 p-5 shadow-[0_8px_30px_rgba(0,83,91,0.14)] backdrop-blur-md md:left-8 md:w-[24rem]"
@@ -407,7 +411,8 @@ export default function Home() {
             </aside>
           ) : (
             !isLoading &&
-            !isError && (
+            !isError &&
+            viewMode === "pin" && (
               <button
                 type="button"
                 onClick={reopenIntro}
