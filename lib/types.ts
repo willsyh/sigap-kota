@@ -22,4 +22,6 @@ export interface Report {
   status: ReportStatus;
   vote_count: number;
   created_at: string;
+  ai_verdict?: "match" | "mismatch" | "unsure";
+  ai_reason?: string | null;
 }

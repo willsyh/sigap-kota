@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   AlertCircle,
+  AlertTriangle,
   CheckCircle2,
   ClipboardClock,
   Download,
@@ -690,6 +691,15 @@ export default function AdminPage() {
                                   <span className="rounded-full bg-tertiary/10 px-2 py-0.5 font-medium text-tertiary">{CATEGORY_LABELS[report.category]}</span>
                                   <span>{new Date(report.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</span>
                                 </div>
+                                {report.ai_verdict === "mismatch" && (
+                                  <span
+                                    title={report.ai_reason ?? "AI menilai foto tidak sesuai dengan judul/deskripsi"}
+                                    className="mt-1.5 inline-flex items-center gap-1 rounded-full border border-destructive/30 bg-destructive/10 px-2 py-0.5 text-[11px] font-semibold text-destructive"
+                                  >
+                                    <AlertTriangle className="h-3 w-3" aria-hidden="true" />
+                                    AI: tidak sesuai
+                                  </span>
+                                )}
                               </td>
                               <td className="whitespace-nowrap px-4 py-3">
                                 <p className="text-sm tabular-nums text-on-surface-variant">{formatCoord(report.latitude)}, {formatCoord(report.longitude)}</p>
