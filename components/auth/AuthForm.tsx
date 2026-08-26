@@ -20,25 +20,24 @@ const GENERIC_AUTH_ERROR = "Terjadi kesalahan. Coba lagi sebentar.";
 
 function mapAuthErrorMessage(error: unknown): string {
   if (error instanceof AuthError) {
-    switch (error.code) {
-      case "invalid_credentials": return "Email atau kata sandi salah.";
-      case "email_not_confirmed": return "Email belum dikonfirmasi. Cek kotak masuk Anda.";
-      case "user_already_exists": return "Email sudah terdaftar. Silakan masuk.";
-      case "weak_password": return "Kata sandi terlalu lemah. Gunakan minimal 6 karakter.";
-      case "over_request_rate_limit":
-      case "over_email_send_rate_limit": return "Terlalu banyak percobaan. Coba lagi nanti.";
-      default: {
-        const msg = error.message.toLowerCase();
-        if (msg.includes("invalid login credentials")) return "Email atau kata sandi salah.";
-        if (msg.includes("email not confirmed")) return "Email belum dikonfirmasi. Cek kotak masuk Anda.";
-        if (msg.includes("already registered") || msg.includes("already exists")) return "Email sudah terdaftar. Silakan masuk.";
-        if (msg.includes("rate limit")) return "Terlalu banyak percobaan. Coba lagi nanti.";
-        return `${GENERIC_AUTH_ERROR} (${error.code ?? "unknown"})`;
-      }
-    }
+    const code = error.code ?? "";
+    const msg = error.message ?? "";
+
+    if (code === "invalid_credentials" || msg.toLowerCase().includes("invalid login credentials"))
+      return "Email atau kata sandi salah.";
+    if (code === "email_not_confirmed" || msg.toLowerCase().includes("email not confirmed"))
+      return "Email belum dikonfirmasi. Cek kotak masuk Anda.";
+    if (code === "user_already_exists" || msg.toLowerCase().includes("already") || msg.toLowerCase().includes("exists"))
+      return "Email sudah terdaftar. Silakan masuk.";
+    if (code === "weak_password")
+      return "Kata sandi terlalu lemah. Gunakan minimal 6 karakter.";
+    if (code.includes("rate_limit") || msg.toLowerCase().includes("rate limit"))
+      return "Terlalu banyak percobaan. Coba lagi nanti.";
+
+    return msg || GENERIC_AUTH_ERROR;
   }
   if (error instanceof TypeError) return "Gagal terhubung ke server. Periksa koneksi internet Anda.";
-  if (error instanceof Error) return `${GENERIC_AUTH_ERROR} — ${error.message}`;
+  if (error instanceof Error) return error.message || GENERIC_AUTH_ERROR;
   return GENERIC_AUTH_ERROR;
 }
 
