@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { AlertCircle, Search, SlidersHorizontal } from "lucide-react";
 
@@ -79,15 +78,6 @@ export default function LaporanPage() {
       <Navbar />
       <main className="mx-auto w-full max-w-4xl px-4">
         <section className="sticky top-16 z-30 bg-surface/96 pb-3 pt-4 backdrop-blur-md">
-          <div className="mb-4 flex rounded-xl bg-surface-high p-1 shadow-sm">
-            <Link href="/" className="flex h-10 flex-1 items-center justify-center rounded-lg text-xs font-semibold text-on-surface-variant transition-colors hover:bg-surface-container">
-              Tampilan Peta
-            </Link>
-            <div className="flex h-10 flex-1 items-center justify-center rounded-lg bg-surface-lowest text-xs font-semibold text-primary shadow-sm">
-              Tampilan Daftar
-            </div>
-          </div>
-
           <div className="no-scrollbar flex items-center gap-2 overflow-x-auto pb-1">
             <button type="button" onClick={resetFilters} className={chipClass(category === "all" && status === "all" && !search)}>
               Semua Laporan

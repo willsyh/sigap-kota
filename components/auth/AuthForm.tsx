@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AuthError } from "@supabase/supabase-js";
-import { Loader2, LockKeyhole, Mail } from "lucide-react";
+import { Eye, EyeOff, Loader2, LockKeyhole, Mail } from "lucide-react";
 import { toast } from "sonner";
 
 import CivicBrandMark from "@/components/CivicBrandMark";
@@ -46,6 +46,7 @@ export default function AuthForm({ mode, nextPath }: AuthFormProps) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -128,15 +129,25 @@ export default function AuthForm({ mode, nextPath }: AuthFormProps) {
             <LockKeyhole className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-outline" />
             <input
               id="password"
-              type="password"
+              type={showPassword ? "text" : "password"}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               placeholder="Minimal 6 karakter"
               required
               minLength={6}
               autoComplete={isLogin ? "current-password" : "new-password"}
-              className="h-12 w-full rounded-lg border border-outline-variant bg-surface-lowest pl-10 pr-3 text-sm outline-none transition-colors placeholder:text-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/15"
+              className="h-12 w-full rounded-lg border border-outline-variant bg-surface-lowest pl-10 pr-12 text-sm outline-none transition-colors placeholder:text-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/15"
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword((visible) => !visible)}
+              aria-label={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
+              aria-pressed={showPassword}
+              title={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
+              className="absolute right-0.5 top-1/2 flex h-11 w-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-outline transition-colors hover:bg-primary/5 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            >
+              {showPassword ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
+            </button>
           </div>
         </div>
 
