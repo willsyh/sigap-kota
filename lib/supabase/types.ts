@@ -130,6 +130,57 @@ export interface Database {
           },
         ];
       };
+      perceptions: {
+        Row: {
+          id: string;
+          user_id: string;
+          latitude: number;
+          longitude: number;
+          sentiment: Database["public"]["Enums"]["perception_sentiment"];
+          reason: Database["public"]["Enums"]["perception_reason"] | null;
+          note: string | null;
+          report_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          latitude: number;
+          longitude: number;
+          sentiment: Database["public"]["Enums"]["perception_sentiment"];
+          reason?: Database["public"]["Enums"]["perception_reason"] | null;
+          note?: string | null;
+          report_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          latitude?: number;
+          longitude?: number;
+          sentiment?: Database["public"]["Enums"]["perception_sentiment"];
+          reason?: Database["public"]["Enums"]["perception_reason"] | null;
+          note?: string | null;
+          report_id?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "perceptions_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "perceptions_report_id_fkey";
+            columns: ["report_id"];
+            isOneToOne: false;
+            referencedRelation: "reports";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       deletion_logs: {
         Row: {
           id: string;
@@ -196,6 +247,16 @@ export interface Database {
         | "fasilitas_umum"
         | "lainnya";
       report_status: "dilaporkan" | "diproses" | "menunggu_konfirmasi" | "selesai";
+      // Diimplementasikan sebagai text + CHECK constraint di Postgres.
+      perception_sentiment: "nyaman" | "biasa" | "tidak_nyaman";
+      perception_reason:
+        | "kotor"
+        | "bising"
+        | "jalan_buruk"
+        | "ramai"
+        | "kurang_penerangan"
+        | "kurang_aman"
+        | "lainnya";
     };
     CompositeTypes: Record<string, never>;
   };
@@ -204,3 +265,10 @@ export interface Database {
 export type ReportRow = Database["public"]["Tables"]["reports"]["Row"];
 export type VoteRow = Database["public"]["Tables"]["votes"]["Row"];
 export type StatusLogRow = Database["public"]["Tables"]["status_logs"]["Row"];
+export type DeletionLogRow = Database["public"]["Tables"]["deletion_logs"]["Row"];
+export type PerceptionRow = Database["public"]["Tables"]["perceptions"]["Row"];
+export type PerceptionInsert =
+  Database["public"]["Tables"]["perceptions"]["Insert"];
+export type PerceptionSentiment =
+  Database["public"]["Enums"]["perception_sentiment"];
+export type PerceptionReason = Database["public"]["Enums"]["perception_reason"];

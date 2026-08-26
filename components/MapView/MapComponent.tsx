@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MapContainer, Marker, TileLayer, useMap } from "react-leaflet";
+import { CircleMarker, MapContainer, Marker, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 
 import { OPENSTREETMAP_ATTRIBUTION, OPENSTREETMAP_TILE_URL } from "@/lib/constants/map";
+import { PERCEPTION_SENTIMENT_COLORS } from "@/lib/constants/perceptions";
 import type { Report } from "@/lib/types";
+import type { PerceptionPoint } from "@/components/perceptions/PerceptionPulseCard";
 
 // leaflet.heat menempel plugin ke global window.L, sedangkan build ESM
 // Leaflet tidak membuat global tersebut. Daftarkan sebelum plugin dimuat.
@@ -28,8 +30,10 @@ interface MapComponentProps {
   onSelectReport?: (report: Report) => void;
   center?: [number, number];
   zoom?: number;
-  viewMode?: "marker" | "heatmap";
+  viewMode?: "marker" | "heatmap" | "unseen";
   onSwitchToMarker?: () => void;
+  perceptions?: PerceptionPoint[];
+  onMapClick?: (lat: number, lng: number) => void;
 }
 
 // Heatmap interaction cap: clicks zoom in by up to two steps and never past
@@ -128,6 +132,62 @@ function HeatmapLayer({ reports, onSwitchToMarker }: { reports: Report[]; onSwit
   return null;
 }
 
+// Unseen Layer: titik persepsi warga di mode "unseen". Klik pada peta
+// membuka dialog persepsi; klik pada titik persepsi tidak diteruskan ke peta.
+function UnseenLayer({
+  perceptions,
+  onMapClick,
+}: {
+  perceptions: PerceptionPoint[];
+  onMapClick?: (lat: number, lng: number) => void;
+}) {
+  const map = useMap();
+
+  // Kursor crosshair menandakan peta siap menerima ketukan.
+  useEffect(() => {
+    const container = map.getContainer();
+    container.style.cursor = "crosshair";
+    return () => {
+      container.style.cursor = "";
+    };
+  }, [map]);
+
+  useEffect(() => {
+    const handleMapClick = (e: L.LeafletMouseEvent) => {
+      onMapClick?.(e.latlng.lat, e.latlng.lng);
+    };
+
+    map.on("click", handleMapClick);
+    return () => {
+      map.off("click", handleMapClick);
+    };
+  }, [map, onMapClick]);
+
+  return (
+    <>
+      {perceptions.map((point) => (
+        <CircleMarker
+          key={point.id}
+          center={[point.latitude, point.longitude]}
+          radius={7}
+          pathOptions={{
+            color: "#f8fafc",
+            weight: 1.5,
+            fillColor: PERCEPTION_SENTIMENT_COLORS[point.sentiment],
+            fillOpacity: 0.75,
+          }}
+          bubblingMouseEvents={false}
+          eventHandlers={{
+            click: (e: L.LeafletMouseEvent) => {
+              L.DomEvent.stopPropagation(e.originalEvent);
+            },
+          }}
+        />
+      ))}
+    </>
+  );
+}
+
 // Center view controller.
 //
 // The map must fly ONLY when a report becomes selected or the selection moves
@@ -161,16 +221,25 @@ function MapViewController({
   return null;
 }
 
-// Helper to create category-colored HTML markers
+// Helper to create status-colored HTML markers.
+// Semantic colors per DESIGN.md: dilaporkan = neutral gray,
+// diproses/menunggu_konfirmasi = amber, selesai = green with a check glyph
+// so resolved reports visibly demonstrate the response loop on the map.
 function createCustomIcon(status: Report["status"], isSelected: boolean) {
   const colorByStatus: Record<Report["status"], string> = {
     dilaporkan: "#6f797a",
-    diproses: "#8e4e14",
+    diproses: "#d97706",
     menunggu_konfirmasi: "#b45309",
-    selesai: "#01544f",
+    selesai: "#15803d",
   };
   const color = colorByStatus[status];
   const size = isSelected ? 42 : 34;
+  const glyphSize = isSelected ? 14 : 11;
+
+  const glyph =
+    status === "selesai"
+      ? `<svg viewBox="0 0 24 24" width="${glyphSize}" height="${glyphSize}" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>`
+      : `<div style="width:${glyphSize}px;height:${glyphSize}px;border:2px solid white;border-radius:9999px;"></div>`;
 
   const html = `
     <div style="position:relative;width:${size}px;height:${size + 8}px;filter:drop-shadow(0 4px 5px rgba(17,28,44,.24));">
@@ -197,7 +266,7 @@ function createCustomIcon(status: Report["status"], isSelected: boolean) {
         background:${color};
         box-shadow:0 2px 6px rgba(17,28,44,.2);
       ">
-        <div style="width:${isSelected ? 12 : 9}px;height:${isSelected ? 12 : 9}px;border:2px solid white;border-radius:9999px;"></div>
+        ${glyph}
       </div>
     </div>
   `;
@@ -218,6 +287,8 @@ export default function MapComponent({
   zoom = 13,
   viewMode = "marker",
   onSwitchToMarker,
+  perceptions = [],
+  onMapClick,
 }: MapComponentProps) {
   const defaultCenter: [number, number] = useMemo(() => center, [center]);
 
@@ -241,6 +312,8 @@ export default function MapComponent({
 
         {viewMode === "heatmap" ? (
           <HeatmapLayer reports={reports} onSwitchToMarker={onSwitchToMarker} />
+        ) : viewMode === "unseen" ? (
+          <UnseenLayer perceptions={perceptions} onMapClick={onMapClick} />
         ) : (
           reports.map((report) => {
             const isSelected = report.id === selectedReportId;
@@ -251,6 +324,7 @@ export default function MapComponent({
                 key={report.id}
                 position={[report.latitude, report.longitude]}
                 icon={icon}
+                title={report.title}
                 eventHandlers={{
                   click: () => onSelectReport?.(report),
                 }}

@@ -30,6 +30,7 @@
   --color-on-surface-variant: var(--on-surface-variant);
   --color-outline: var(--outline);
   --color-outline-variant: var(--outline-variant);
+  --color-outline-strong: var(--outline-strong);
   --color-tertiary: var(--tertiary);
   --color-tertiary-container: var(--tertiary-container);
   --color-on-tertiary-container: var(--on-tertiary-container);
@@ -70,6 +71,16 @@
 }
 
 :root {
+  /* ------------------------------------------------------------------
+     Token usage guidance (WCAG AA):
+     - Placeholder / secondary / informative TEXT must use
+       --outline (4.5:1+) or --outline-strong (5.5:1+) on light surfaces
+       (#ffffff, #f9f9ff, #e7eeff). Utilities: text-outline,
+       text-outline-strong, placeholder:text-outline.
+     - Borders, dividers, and decorative strokes use --outline-variant
+       (#bec8ca). Do NOT use --outline-variant for readable text; it
+       fails WCAG AA on light surfaces by design (it is a border token).
+     ------------------------------------------------------------------ */
   --surface: #f9f9ff;
   --surface-lowest: #ffffff;
   --surface-low: #f0f3ff;
@@ -80,7 +91,12 @@
   --surface-bright: #f9f9ff;
   --on-surface: #111c2c;
   --on-surface-variant: #3e494a;
-  --outline: #6f797a;
+  /* Darkened from #6f797a so informative text passes WCAG AA (>=4.5:1)
+     on white and tinted surfaces. */
+  --outline: #626c6d;
+  /* Stronger text token for placeholder/secondary text that needs extra
+     contrast headroom on tinted surfaces such as --surface-container. */
+  --outline-strong: #556061;
   --outline-variant: #bec8ca;
   --tertiary: #01544f;
   --tertiary-container: #286d67;
@@ -141,6 +157,8 @@
   --on-surface: #ebf1ff;
   --on-surface-variant: #c3c8d0;
   --outline: #aeb9ba;
+  /* Brighter counterpart of --outline-strong for dark surfaces. */
+  --outline-strong: #ccd6d7;
   --outline-variant: #3e494a;
   --tertiary: #90d3cb;
   --tertiary-container: #286d67;
@@ -217,12 +235,96 @@
   }
 }
 
+/* Marker peta selalu menunjukkan kursor pointer (interaktif). */
+.custom-leaflet-marker {
+  cursor: pointer;
+}
+
 .no-scrollbar {
   scrollbar-width: none;
 }
 
 .no-scrollbar::-webkit-scrollbar {
   display: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* SigapKota animation utilities                                       */
+/*                                                                     */
+/* CONTRACT: the class names below (.anim-fade-up, .anim-fade-in,      */
+/* .anim-scale-in, .anim-delay-1 .. .anim-delay-6) are consumed by     */
+/* multiple lanes. Do not rename or remove them.                       */
+/*                                                                     */
+/* Performance rules:                                                  */
+/* - Only `transform` and `opacity` are animated (GPU-composited;      */
+/*   no layout properties like width/height/top/left/margin).          */
+/* - No infinite/looping animations.                                   */
+/* - Everything lives inside prefers-reduced-motion: no-preference so  */
+/*   reduced-motion users get none (the global reduce block above      */
+/*   remains as a second safety net).                                  */
+/* ------------------------------------------------------------------ */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes anim-fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes anim-fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes anim-scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .anim-fade-up {
+    animation: anim-fade-up 300ms cubic-bezier(0, 0, 0.2, 1) both;
+  }
+
+  .anim-fade-in {
+    animation: anim-fade-in 200ms ease-out both;
+  }
+
+  .anim-scale-in {
+    animation: anim-scale-in 150ms ease-out both;
+  }
+
+  /* Stagger helpers for lists entering with one of the animations above. */
+  .anim-delay-1 { animation-delay: 60ms; }
+  .anim-delay-2 { animation-delay: 120ms; }
+  .anim-delay-3 { animation-delay: 180ms; }
+  .anim-delay-4 { animation-delay: 240ms; }
+  .anim-delay-5 { animation-delay: 300ms; }
+  .anim-delay-6 { animation-delay: 360ms; }
+
+  /* Marker peta: hover scale memakai properti CSS individual `scale`
+     sehingga TIDAK menimpa transform posisi translate3d milik Leaflet.
+     Transition-only, tidak ada animasi saat zoom/scroll. */
+  .custom-leaflet-marker {
+    transition: scale 150ms ease-out;
+  }
+
+  .custom-leaflet-marker:hover {
+    scale: 1.08;
+  }
 }
 
 .civic-map-pattern {
