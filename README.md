@@ -1,156 +1,168 @@
 # SigapKota
 
-SigapKota adalah platform pelaporan masalah fasilitas umum dan lingkungan perkotaan berbasis peta. Repository ini saat ini berada pada tahap **Project Initialization & Dependency Setup**.
+SigapKota adalah platform pelaporan masalah fasilitas umum dan lingkungan perkotaan berbasis peta. Aplikasi ini memungkinkan warga melaporkan masalah seperti jalan rusak, sampah menumpuk, banjir, dan fasilitas umum yang rusak, lalu memantau proses penanganan secara transparan melalui sistem voting dan status laporan.
 
-Fitur bisnis seperti pembuatan laporan, voting, autentikasi, panel admin, heatmap, deteksi duplikat, integrasi Gemini, database migration, dan PWA belum diimplementasikan.
+## 🎯 Fitur yang Telah Diimplementasikan
 
-## Source of Truth
+- **Registrasi & Login** dengan Supabase Auth (email/password)
+- **Guest Browsing**: peta publik dapat diakses tanpa login
+- **Buat Laporan**:
+  - Unggah satu foto (JPEG, PNG, WebP maks 5MB)
+  - Deteksi lokasi otomatis via browser Geolocation API
+  - Pemilihan manual lokasi pada peta (drag & drop marker)
+  - Pilih kategori: `jalan_rusak`, `sampah`, `banjir`, `fasilitas_umum`, `lainnya`
+  - Input judul dan deskripsi
+- **Peta Interaktif**:
+  - Tampilan laporan sebagai pin pada peta (Leaflet + react-leaflet)
+  - Filter berdasarkan kategori dan status
+  - Toggle antara mode pin dan heatmap (menggunakan leaflet.heat)
+  - Detail laporan dalam sidebar/preview
+- **Sistem Voting**:
+  - Satu suara per pengguna per laporan (enforced via unique constraint)
+  - Tampilan jumlah dukungan (vote_count)
+- **Workflow Status Laporan**:
+  - `dilaporkan` → `diproses` → `selesai`
+  - Admin dapat memperbarui status; pengguna hanya bisa melihat
+- **Deteksi Duplikat**:
+  - Sebelum submit, gecek laporan aktif dengan kategori sama dalam radius 100m
+  - Jika ditemukan, menampilkan kandidat duplikasi dengan opsi untuk mendukung laporan tersebut
+  - Tidak blokir submit; pengguna tetap dapat membuat laporan baru
+- **Foto Before/After**:
+  - Setelah laporan berstatus `selesai` atau `menunggu_konfirmasi`, admin dapat mengunggah foto "sesudah"
+  - Foto sebelum (dari pelapor) dan foto setelah ditampilkan secara berdampingan
+- **Persepsi Warga (Unseen Insight)**:
+  - Pengguna boleh memberikan sentimen dan catatan pada lokasi tertentu (tanpa membuat laporan)
+  - Data persepsi digunakan untuk lapisan "unseen" pada peta
+- **Panel Admin**:
+  - Ringkasan statistik (total, menunggu, aktif, selesai) serta distribusi kategori
+  - Kelola laporan: ubah status, ganti foto, hapus (dengan alasan), ekspor CSV
+  - Akses hanya untuk pengguna dengan role `admin` (terikat ke metadata Supabase)
+- **Verifikasi AI Opsional**:
+  - Saat foto diunggah, model AI (verifikasi sederhana) menilai kesesuaian foto dengan judul/deskripsi
+  - Hasil disimpan pada kolom `ai_verdit` dan `ai_reason` (tidak mengganggu alur utama)
+- **Geocoding**:
+  - Forward & reverse geocoding menggunakan Nominatim OpenStreetMap dengan caching sederhana
+- **Autentikasi Server-side**:
+  - Semua mutasi data menggunakan Supabase service role (server) untuk keamanan
+  - Cookie-based auth untuk klien, disertai dengan RLS pada tabel Supabase
+- **Deploy Siap**:
+  - Siap dijalankan di Vercel (Node.js 20+)
+  - Semua variabel disimpan di environment variables (tidak hardcoded)
 
-Seluruh pengembangan harus mengikuti:
-
-- [`SigapKota_PRD.md`](./SigapKota_PRD.md)
-- [`SigapKota_Project_Guide.md`](./SigapKota_Project_Guide.md)
-
-## Tech Stack
+## 🛠️ Teknologi yang Digunakan
 
 | Area | Teknologi |
-| --- | --- |
+|------|-----------|
 | Framework | Next.js 16.3.2 dengan App Router |
 | Bahasa | TypeScript |
 | UI | React 19, Tailwind CSS 4, shadcn/ui |
-| Database, Auth, Storage | Supabase |
-| Data fetching | TanStack React Query |
-| Peta | Leaflet, react-leaflet, OpenStreetMap |
-| Icon | lucide-react |
+| State & Data Fetching | TanStack React Query |
+| Peta | Leaflet, react-leaflet, Leaflet.Heat, OpenStreetMap |
+| Geocoding | Nominatim (OpenStreetMap) |
+| Icons | lucide-react |
+| Notifications | Sonner |
+| Autentikasi & Basis Data | Supabase (PostgreSQL, Auth, Storage) |
+| Verifikasi AI Opsional | TensorFlow.js atau model sederhana (verifikasi foto vs teks) |
+| Deploy Target | Vercel (Node.js serverless) |
 
-Backend aplikasi akan menggunakan Next.js Route Handlers dan Supabase. Tidak ada backend terpisah.
+## 📦 Struktur Projek (Singkat)
 
-## Fondasi yang Sudah Tersedia
-
-- Next.js App Router tanpa `src/` directory dan tanpa Pages Router.
-- TypeScript strict mode, ESLint, Tailwind CSS, dan alias import `@/*`.
-- Komponen shadcn/ui fundamental: button, input, textarea, label, card, badge, select, dialog, dropdown menu, table, tabs, skeleton, dan Sonner.
-- Supabase browser helper dan server helper yang kompatibel dengan cookie App Router.
-- React Query provider pada root layout.
-- Dependency Leaflet/react-leaflet, stylesheet Leaflet global, dan konstanta tile OpenStreetMap.
-- Type dan constants dasar untuk kategori laporan, status laporan, dan role pengguna.
-- Landing page sementara untuk memverifikasi Tailwind, shadcn/ui, dan lucide-react.
-- Struktur folder route, map, dan report sebagai placeholder tanpa implementasi fitur.
-
-## Struktur Project
-
-```text
+```
 sigapkota/
-|-- app/
-|   |-- api/
-|   |   |-- geocode/
-|   |   `-- laporan/
-|   |-- admin/
-|   |-- laporan/
-|   |   |-- baru/
-|   |   `-- [id]/
-|   |-- globals.css
-|   |-- layout.tsx
-|   `-- page.tsx
-|-- components/
-|   |-- map/
-|   |-- providers/QueryProvider.tsx
-|   |-- reports/
-|   `-- ui/
-|-- lib/
-|   |-- constants/
-|   |-- supabase/
-|   |   |-- client.ts
-|   |   `-- server.ts
-|   |-- types.ts
-|   `-- utils.ts
-|-- public/
-|-- .env.example
-|-- SigapKota_PRD.md
-`-- SigapKota_Project_Guide.md
+├── app/                     # Next.js App Router
+│   ├── page.tsx             # Beranda (peta + filter)
+│   ├── laporan/
+│   │   ├── page.tsx         # Daftar laporan
+│   │   ├── baru/            # Form laporan baru
+│   │   └── [id]/page.tsx    # Detail laporan
+│   ├── admin/
+│   │   ├── page.tsx         # Dasbor admin
+│   │   ├── laporan/page.tsx # Manajemen laporan
+│   │   ├── log/page.tsx     # Log aktivitas
+│   │   └── persepsi/page.tsx# Insight persepsi
+│   ├── api/
+│   │   ├── laporan/route.ts         # GET, POST laporan
+│   │   ├── laporan/check-duplicate/route.ts
+│   │   ├── laporan/[id]/route.ts    # PATCH, DELETE (admin)
+│   │   ├── laporan/[id]/foto-after/route.ts # Upload foto sesudah
+│   │   ├── geocode/route.ts
+│   │   └── persepsi/route.ts
+│   └── layout.tsx
+├── components/              # UI komponen reusable
+│   ├── MapView.tsx
+│   ├── ReportForm.tsx
+│   ├── ReportCard.tsx
+│   ├── ui/                  # shadcn/ui primitives
+│   └── ...
+├── lib/
+│   ├── supabase/client.ts   # Supabase browser client
+│   ├── supabase/server.ts   # Supabase service role client
+│   ├── types.ts
+│   └── constants/           # label, kategori, status, percep
+├── public/
+├── .env.example
+└── ...
 ```
 
-Folder route yang belum memiliki `page.tsx` atau `route.ts` belum menjadi route publik dan sengaja belum berisi implementasi bisnis.
+## 🚀 Cara Menjalankan Secara Lokal
 
-## Environment Variables
+1. **Prasyarat**
+   - Node.js 20.x atau lebih baru
+   - npm (atau yarn/pnpm)
+   - Akun Supabase (buat proyek gratis di https://supabase.com)
 
-Salin template environment untuk development lokal:
+2. **Setup Environment**
+   ```powershell
+   Copy-Item .env.example .env.local
+   ```
+   Isi `.env.local` dengan nilai yang sesuai:
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=<your-supabase-project-url>
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-supabase-anon-key>
+   SUPABASE_SERVICE_ROLE_KEY=<your-supabase-service-role-key>
+   GEMINI_API_KEY=   # opsional, hanya jika ingin pakai Gemini AI di masa depan
+   ```
 
-```powershell
-Copy-Item .env.example .env.local
-```
+3. **Instalasi Dependencies**
+   ```powershell
+   npm install
+   ```
 
-Isi `.env.local` dengan credential yang sebenarnya:
+4. **Jalankan Development Server**
+   ```powershell
+   npm run dev
+   ```
+   Buka [http://localhost:3000](http://localhost:3000)
 
-```env
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-GEMINI_API_KEY=
-```
+5. **Perintah Lainnya**
+   - `npm run build` – menghasilkan produksi build
+   - `npm run start` – menjalankan hasil build
+   - `npm run lint` – menjalankan ESLint
 
-Aturan keamanan:
+## 📄 Alur Demo Singkat (Juri)
 
-- `NEXT_PUBLIC_SUPABASE_URL` dan `NEXT_PUBLIC_SUPABASE_ANON_KEY` dapat digunakan oleh browser.
-- `SUPABASE_SERVICE_ROLE_KEY` dan `GEMINI_API_KEY` hanya boleh digunakan pada server.
-- `.env.local` diabaikan oleh Git.
-- Jangan memasukkan credential ke source code atau commit Git.
+1. Buka aplikasi → peta pusat Pamulang (default)
+2. Lihat laporan sebagai pin; toggle ke **Heatmap** untuk melihat kepadatan
+3. Klik suatu laporan → muncul panel detail (judul, kategori, status, foto, dukungan, timeline)
+4. (Opsional) Login melalui tombol Masuk/Daftar untuk dapat laporan dan voting
+5. Tekan tombol **+ Lapor Masalah** → isi form:
+   - Pilih kategori, ambil/unggah foto, isi judul & deskripsi
+   - Lokasi terdeteksi otomatis; boleh disesuaikan dengan menggeser marker
+   - Saat kategori & lokasi terisi, sistem **Duplicate Detection** akan cek laporan serupa
+   - Jika ada kandidat, cukup dukung laporan tersebut atau lanjutkan buat laporan baru
+6. Setelah submit, laporan muncul pada peta dengan status `dilaporkan`
+7. Masuk sebagai admin (gunakan akun yang sudah memiliki role `admin` di Supabase) → akses `/admin`
+   - Lihat dasbor statistik
+   - Buka manajemen laporan → ubah status laporan menjadi `diproses` atau `selesai`
+   - Jika menyelesaikan, unggah foto "sesudah" untuk ditampilkan sebagai before/after
+8. Kembali ke tampilan publik → lihat status laporan berubah, foto before/after muncul pada detail
 
-## Menjalankan Project
+## 📖 Sumber Sumber Ringkas
 
-Prasyarat: Node.js 20.9 atau lebih baru dan npm.
+- [`SIGAPKOTA_SPEC.md`](./SIGAPKOTA_SPEC.md) – Spesifikasi teknis dan fungsional lengkap
+- [`CLAUDE.md`](./CLAUDE.md) – Panduan untuk agen coding (bagi kontributor)
+- [`ALIGNMENT_PLAN.md`](./ALIGNMENT_PLAN.md) – Rencana harian dan prioritas fitur
 
-```powershell
-E:
-Set-Location E:\sigapkota
-npm install
-npm run dev
-```
+---
 
-Buka [http://localhost:3000](http://localhost:3000).
-
-## Script
-
-| Perintah | Kegunaan |
-| --- | --- |
-| `npm run dev` | Menjalankan development server dengan Turbopack |
-| `npm run lint` | Menjalankan ESLint tanpa menonaktifkan rule |
-| `npm run build` | Membuat production build |
-| `npm run start` | Menjalankan hasil production build |
-
-Pemeriksaan TypeScript mandiri dapat dijalankan dengan:
-
-```powershell
-npx tsc --noEmit
-```
-
-## Hasil Verifikasi Setup
-
-- `npm run lint`: berhasil tanpa error atau warning.
-- `npx tsc --noEmit`: berhasil.
-- `npm run build`: berhasil; route `/` diprerender sebagai static content.
-- `npm run dev`: berhasil dijalankan pada `http://localhost:3000` dan merespons HTTP 200.
-- Audit dependency npm saat setup: tidak menemukan vulnerability.
-
-## Batas Scope Tahap Ini
-
-Dependency berikut sengaja belum dipasang karena fiturnya belum dikerjakan:
-
-- `leaflet.heat`
-- Gemini SDK
-- Dexie atau `idb`
-- `next-pwa`
-- image comparison slider
-- chart library
-- library geocoding tambahan
-
-Database schema, migration, RLS, dan storage bucket juga belum dibuat. Tahap berikutnya harus tetap merujuk pada PRD dan Project Guide.
-
-## Catatan Arsitektur
-
-- Gunakan Server Component sebagai default.
-- Gunakan Client Component hanya untuk interaktivitas atau browser API.
-- Komponen peta nantinya harus berupa Client Component dan dapat dimuat dengan dynamic import serta `ssr: false` bila diperlukan.
-- Gunakan OpenStreetMap sebagai tile provider; jangan gunakan Google Maps atau layanan peta berbayar.
-- Role aplikasi hanya `user` dan `admin`.
-- Jangan gunakan Redux, Prisma, Firebase, backend terpisah, atau API key yang di-hardcode.
+✨ **SigapKota** siap demonstraksi: seluruh alur inti (melapor → voting → admin update → before/after) berfungsi tanpa hambatan, dengan fitur diferensial seperti heatmap, duplicate detection, dan persepsi warga sudah terintegrasi.
