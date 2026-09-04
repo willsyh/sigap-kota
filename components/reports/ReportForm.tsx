@@ -4,10 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Check, CircleDot, Copy, Crosshair, Ellipsis, ImagePlus, Landmark, Loader2, LogIn, MapPin, ThumbsUp, Trash2, UserPlus, Waves, X } from "lucide-react";
+import { Check, CircleDot, Crosshair, Ellipsis, ImagePlus, Landmark, Loader2, LogIn, MapPin, Trash2, UserPlus, Waves, X } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -20,11 +19,10 @@ import PerceptionDialog from "@/components/perceptions/PerceptionDialog";
 import {
   CATEGORY_LABELS,
   REPORT_CATEGORIES,
-  STATUS_META,
 } from "@/lib/constants/reports";
 import { createClient } from "@/lib/supabase/client";
 import { saveOfflineReport } from "@/lib/offline/storage";
-import type { ReportCategory, ReportStatus } from "@/lib/types";
+import type { ReportCategory } from "@/lib/types";
 
 // Default: area Pamulang
 const DEFAULT_COORDS = { lat: -6.3458, lng: 106.7394 };
@@ -96,19 +94,9 @@ export default function ReportForm() {
     };
   }, []);
 
-  // Duplicate detection: tidak memblokir submit, hanya menyarankan dukungan
-  const [candidates, setCandidates] = useState<DuplicateCandidate[]>([]);
-  const [checkingKey, setCheckingKey] = useState<string | null>(null);
-  const [votedIds, setVotedIds] = useState<Set<string>>(new Set());
-  const [votingId, setVotingId] = useState<string | null>(null);
-  const dismissedKeyRef = useRef<string | null>(null);
   // True setelah user menggeser/mengklik peta secara manual; auto-detect
   // GPS awal tidak boleh menimpa posisi pilihan user.
   const userAdjustedRef = useRef(false);
-  const duplicateKey = category
-    ? buildDuplicateKey(category, coords.lat, coords.lng)
-    : null;
-  const checkingDuplicates = duplicateKey !== null && checkingKey === duplicateKey;
 
   // Auto-detect lokasi user saat halaman dibuka
   function detectLocation() {
@@ -158,116 +146,6 @@ export default function ReportForm() {
       cancelled = true;
     };
   }, []);
-
-  // Cek laporan serupa (debounce 600ms) saat kategori + koordinat terisi.
-  // Gagal fetch/error check_failed diabaikan diam-diam: fitur ini tidak
-  // boleh memblokir pembuatan laporan.
-  useEffect(() => {
-    const controller = new AbortController();
-    let cancelled = false;
-
-    if (!category || !duplicateKey) {
-      return () => {
-        cancelled = true;
-        controller.abort();
-      };
-    }
-
-    const currentKey = duplicateKey;
-    if (dismissedKeyRef.current === currentKey) {
-      return () => {
-        cancelled = true;
-        controller.abort();
-      };
-    }
-
-    const timer = setTimeout(async () => {
-      try {
-        setCheckingKey(currentKey);
-
-        const res = await fetch("/api/laporan/check-duplicate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ lat: coords.lat, lng: coords.lng, category }),
-          signal: controller.signal,
-        });
-
-        if (cancelled || !res.ok) return;
-
-        const data = await res.json().catch(() => null);
-        if (cancelled || !data || data.error === "check_failed") return;
-
-        const list = Array.isArray(data.candidates)
-          ? (data.candidates as DuplicateCandidate[])
-          : [];
-        setCandidates(list.slice(0, 3));
-      } catch {
-        // AbortError atau kegagalan jaringan: abaikan, jangan blokir form
-      } finally {
-        if (!cancelled) setCheckingKey(null);
-      }
-    }, 600);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [category, coords.lat, coords.lng, duplicateKey]);
-
-  async function handleSupport(candidateId: string) {
-    setVotingId(candidateId);
-
-    try {
-      const res = await fetch(`/api/laporan/${candidateId}/vote`, {
-        method: "POST",
-      });
-
-      if (res.status === 401) {
-        toast.info("Masuk terlebih dahulu untuk mendukung laporan ini.");
-        const next = encodeURIComponent(window.location.pathname);
-        router.push(`/auth/login?next=${next}`);
-        return;
-      }
-
-      if (res.status === 409) {
-        setVotedIds((prev) => new Set(prev).add(candidateId));
-        toast.info("Kamu sudah mendukung laporan ini sebelumnya.");
-        return;
-      }
-
-      if (!res.ok) {
-        toast.error("Gagal mendukung laporan. Coba lagi.");
-        return;
-      }
-
-      const data = await res.json().catch(() => null);
-      setVotedIds((prev) => new Set(prev).add(candidateId));
-
-      if (data && typeof data.vote_count === "number") {
-        setCandidates((prev) =>
-          prev.map((c) =>
-            c.id === candidateId ? { ...c, vote_count: data.vote_count } : c,
-          ),
-        );
-      }
-
-      toast.success("Dukungan terkirim. Terima kasih.");
-    } catch {
-      toast.error("Terjadi kesalahan jaringan. Coba lagi.");
-    } finally {
-      setVotingId(null);
-    }
-  }
-
-  function handleDismissDuplicates() {
-    dismissedKeyRef.current = buildDuplicateKey(
-      category,
-      coords.lat,
-      coords.lng,
-    );
-    setCandidates([]);
-  }
 
   function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0] ?? null;
@@ -517,81 +395,6 @@ export default function ReportForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5 pb-32">
-      {/* Duplicate detection banner */}
-      {checkingDuplicates && candidates.length === 0 && (
-        <div className="anim-slide-down flex items-center gap-2 rounded-xl border border-outline-variant/30 bg-surface-low px-4 py-3">
-          <Loader2 className="h-4 w-4 animate-spin text-primary" />
-          <span className="text-xs font-medium text-on-surface-variant">Memeriksa laporan serupa di sekitar lokasi...</span>
-        </div>
-      )}
-
-      {candidates.length > 0 && (
-        <Card className="anim-fade-up overflow-hidden rounded-2xl border-secondary/30 shadow-[0_2px_12px_rgba(142,78,20,0.08)]">
-          <CardContent className="space-y-3 p-4 sm:p-5">
-            <div className="flex items-start gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary/15">
-                <Copy className="h-4 w-4 text-secondary" />
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm font-bold text-on-surface">Laporan serupa ditemukan</p>
-                <p className="text-xs leading-relaxed text-on-surface-variant">
-                  Ada laporan aktif dengan kategori dan lokasi yang mirip.
-                  Mendukung laporan yang ada membantu mempercepat penanganan.
-                </p>
-              </div>
-            </div>
-
-            <ul className="divide-y overflow-hidden rounded-xl border border-outline-variant/40 bg-surface-lowest">
-              {candidates.map((candidate) => {
-                const voted = votedIds.has(candidate.id);
-                const voting = votingId === candidate.id;
-
-                return (
-                  <li key={candidate.id} className="flex items-center justify-between gap-3 p-3.5">
-                    <div className="min-w-0 space-y-1.5">
-                      <p className="truncate text-sm font-semibold text-on-surface">{candidate.title}</p>
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-on-surface-variant">
-                        <Badge variant={STATUS_META[candidate.status as ReportStatus]?.badgeVariant ?? "outline"} className="px-1.5 py-0 text-xs">
-                          {STATUS_META[candidate.status as ReportStatus]?.label ?? candidate.status}
-                        </Badge>
-                        <span className="flex items-center gap-1"><ThumbsUp className="h-3 w-3" />{candidate.vote_count ?? 0}</span>
-                        <span>~{candidate.distance_meters} m dari lokasi</span>
-                      </div>
-                    </div>
-
-                    <Button
-                      type="button"
-                      variant={voted ? "secondary" : "outline"}
-                      size="sm"
-                      className="h-9 shrink-0 gap-1 rounded-full px-3.5 text-xs"
-                      disabled={voted || voting}
-                      onClick={() => handleSupport(candidate.id)}
-                    >
-                      {voting ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : voted ? (
-                        <>
-                          <Check className="h-3.5 w-3.5" />
-                          Didukung
-                        </>
-                      ) : (
-                        "Dukung"
-                      )}
-                    </Button>
-                  </li>
-                );
-              })}
-            </ul>
-
-            <div className="flex justify-end">
-              <Button type="button" variant="ghost" size="sm" className="h-9 rounded-full text-xs font-semibold text-primary" onClick={handleDismissDuplicates}>
-                Tetap lanjut buat laporan baru
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Step 1: Foto */}
       <section className={`rounded-2xl border bg-surface-lowest p-4 shadow-[0_2px_12px_rgba(0,109,119,0.05)] transition-colors sm:p-5 ${photo ? "border-primary/30" : "border-outline-variant/35"}`}>
         {sectionHeader(1, "Foto Bukti", "Foto membantu petugas memahami masalah", Boolean(photo))}
