@@ -106,20 +106,36 @@ export default function LocationPickerMap({
   onChange,
 }: LocationPickerMapProps) {
   const markerRef = useRef<L.Marker | null>(null);
+  const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
 
   return (
-    <div className="h-full w-full overflow-hidden rounded-md border">
+    <div className="relative h-full w-full overflow-hidden rounded-md border bg-[#e5e3df]">
+      {/* Offline Grid Background Pattern when tiles fail to load */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-20 z-0"
+        style={{
+          backgroundImage: "radial-gradient(#475569 1px, transparent 1px)",
+          backgroundSize: "20px 20px",
+        }}
+      />
+
       <MapContainer
         center={[lat, lng] as LatLngExpression}
         zoom={16}
+        maxZoom={19}
+        minZoom={10}
         scrollWheelZoom={true}
-        className="h-full w-full z-0"
-        style={{ height: "100%", width: "100%" }}
+        className="h-full w-full z-10"
+        style={{ height: "100%", width: "100%", background: "transparent" }}
       >
         <TileLayer
           attribution={OPENSTREETMAP_ATTRIBUTION}
           url={OPENSTREETMAP_TILE_URL}
+          maxNativeZoom={17}
           maxZoom={19}
+          keepBuffer={8}
+          updateWhenIdle={false}
+          updateWhenZooming={true}
         />
         <Recenter lat={lat} lng={lng} />
         <ClickHandler onChange={onChange} />
@@ -137,6 +153,12 @@ export default function LocationPickerMap({
           }}
         />
       </MapContainer>
+
+      {isOffline && (
+        <div className="absolute bottom-2 left-2 z-20 rounded-md bg-black/70 px-2.5 py-1 text-[11px] font-medium text-white shadow backdrop-blur-sm pointer-events-none">
+          Mode Offline — Koordinat GPS Tetap Akurat ({lat.toFixed(5)}, {lng.toFixed(5)})
+        </div>
+      )}
     </div>
   );
 }

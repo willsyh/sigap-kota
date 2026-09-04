@@ -28,6 +28,13 @@ export default function ConnectivityBanner() {
   };
 
   useEffect(() => {
+    // Register Service Worker for Map Tiles Caching
+    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch((err) => {
+        console.warn("Service worker registration skipped:", err);
+      });
+    }
+
     refreshCount();
 
     const handleOnline = () => {
