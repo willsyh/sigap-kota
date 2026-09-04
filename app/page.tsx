@@ -18,6 +18,7 @@ import {
   Wrench,
 } from "lucide-react";
 import CivicBrandMark from "@/components/CivicBrandMark";
+import CityPhotoBand from "@/components/CityPhotoBand";
 import Navbar from "@/components/Navbar";
 import { buttonVariants } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
@@ -245,6 +246,9 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* City visual documentation band */}
+      <CityPhotoBand />
 
       {/* Metric strip: live stats with graceful fallback */}
       <section className="border-y border-outline-variant/30 bg-surface px-4 py-5 md:py-7">

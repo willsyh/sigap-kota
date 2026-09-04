@@ -3,11 +3,15 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
+  ArrowLeft,
+  BookOpen,
   FileText,
   History,
   LayoutDashboard,
   Lock,
+  LogOut,
   Menu,
   MessageSquareHeart,
   UserRound,
@@ -46,6 +50,12 @@ const NAV_ITEMS = [
     icon: History,
     exact: false,
   },
+  {
+    href: "/admin/panduan",
+    label: "Panduan Admin",
+    icon: BookOpen,
+    exact: false,
+  },
 ];
 
 export default function AdminLayout({
@@ -53,10 +63,23 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
   const pathname = usePathname();
   const [access, setAccess] = useState<AdminAccess>("loading");
   const [adminEmail, setAdminEmail] = useState("");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      setLoggingOut(true);
+      await createClient().auth.signOut();
+      router.push("/");
+      router.refresh();
+    } catch {
+      setLoggingOut(false);
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -142,8 +165,28 @@ export default function AdminLayout({
         })}
       </nav>
 
-      <div className="flex items-center gap-3 border-t border-outline-variant/25 p-5">
-        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
+      <div className="border-t border-outline-variant/25 p-3 space-y-2">
+        <Link
+          href="/"
+          onClick={closeDrawer}
+          className="flex h-10 w-full items-center gap-3 rounded-xl border border-outline-variant/30 px-3 text-sm font-medium text-on-surface hover:bg-surface-container transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4 shrink-0 text-outline" />
+          <span>Ke Tampilan Warga</span>
+        </Link>
+        <button
+          type="button"
+          onClick={handleLogout}
+          disabled={loggingOut}
+          className="flex h-10 w-full items-center gap-3 rounded-xl border border-outline-variant/30 px-3 text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
+        >
+          <LogOut className="h-4 w-4 shrink-0" />
+          <span>{loggingOut ? "Keluar..." : "Keluar (Logout)"}</span>
+        </button>
+      </div>
+
+      <div className="flex items-center gap-3 border-t border-outline-variant/25 p-4">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
           <UserRound className="h-5 w-5" />
         </span>
         <div className="min-w-0">
@@ -204,9 +247,10 @@ export default function AdminLayout({
           <span className="font-heading text-sm font-bold">SigapKota Admin</span>
           <Link
             href="/"
-            className="text-xs font-semibold text-primary hover:underline"
+            className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
           >
-            Peta Publik
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Tampilan Warga
           </Link>
         </div>
 

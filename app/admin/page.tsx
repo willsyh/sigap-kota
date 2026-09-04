@@ -9,7 +9,6 @@ import {
   ClipboardClock,
   Eye,
   FileText,
-  Layers3,
   RefreshCw,
 } from "lucide-react";
 
@@ -142,12 +141,6 @@ export default function AdminDashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Link href="/">
-            <Button variant="outline" size="sm" className="gap-2">
-              <Layers3 className="h-4 w-4" />
-              Peta Publik
-            </Button>
-          </Link>
           <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-2">
             <RefreshCw className="h-4 w-4" />
             Segarkan
@@ -259,7 +252,7 @@ export default function AdminDashboardPage() {
       </section>
 
       {/* Quick links banner */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Link
           href="/admin/laporan"
           className="flex items-center justify-between rounded-xl border border-outline-variant/25 bg-surface-lowest p-4 transition hover:border-primary/40 hover:bg-primary/5"
@@ -289,6 +282,16 @@ export default function AdminDashboardPage() {
             <p className="text-xs text-outline">Audit trail semua aktivitas sistem</p>
           </div>
           <RefreshCw className="h-5 w-5 text-tertiary" />
+        </Link>
+        <Link
+          href="/admin/panduan"
+          className="flex items-center justify-between rounded-xl border border-outline-variant/25 bg-surface-lowest p-4 transition hover:border-primary/40 hover:bg-primary/5"
+        >
+          <div>
+            <p className="font-heading text-sm font-semibold">Panduan Admin</p>
+            <p className="text-xs text-outline">SOP operasional & tata cara</p>
+          </div>
+          <AlertCircle className="h-5 w-5 text-primary" />
         </Link>
       </div>
     </div>

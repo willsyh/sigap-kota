@@ -79,32 +79,23 @@ export default function Navbar({ viewMode, onViewModeToggle }: NavbarProps) {
     { href: "/", label: "Tentang", icon: InfoIcon },
     { href: "/peta", label: "Peta", icon: Map },
     { href: "/laporan", label: "Laporan", icon: FileText },
-    ...(!isAdmin
-      ? [{ href: "/panduan", label: "Panduan", icon: CircleHelp }]
-      : []),
-    ...(isAdmin
-      ? [{ href: "/admin", label: "Admin", icon: ShieldCheck }]
-      : []),
+    { href: "/panduan", label: "Panduan", icon: CircleHelp },
   ];
 
   return (
     <header className="sticky top-0 z-50 h-16 w-full border-b border-outline-variant/25 bg-surface/96 shadow-sm backdrop-blur-md">
       <div className="relative mx-auto flex h-full w-full max-w-7xl items-center justify-between px-4 md:px-6">
-        {!isAdmin ? (
-          <Link
-            href="/panduan"
-            aria-label="Buka panduan penggunaan"
-            aria-current={pathname.startsWith("/panduan") ? "page" : undefined}
-            className={cn(
-              "flex h-11 w-11 cursor-pointer items-center justify-center rounded-full transition-colors duration-150 ease-out hover:bg-surface-container active:scale-[0.95] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden",
-              pathname.startsWith("/panduan") ? "bg-primary/10 text-primary" : "text-on-surface-variant",
-            )}
-          >
-            <CircleHelp className="h-6 w-6" />
-          </Link>
-        ) : (
-          <span aria-hidden="true" className="h-11 w-11 md:hidden" />
-        )}
+        <Link
+          href="/panduan"
+          aria-label="Buka panduan penggunaan"
+          aria-current={pathname.startsWith("/panduan") ? "page" : undefined}
+          className={cn(
+            "flex h-11 w-11 cursor-pointer items-center justify-center rounded-full transition-colors duration-150 ease-out hover:bg-surface-container active:scale-[0.95] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden",
+            pathname.startsWith("/panduan") ? "bg-primary/10 text-primary" : "text-on-surface-variant",
+          )}
+        >
+          <CircleHelp className="h-6 w-6" />
+        </Link>
 
         <div className="flex items-center gap-8">
           <Link
@@ -143,6 +134,18 @@ export default function Navbar({ viewMode, onViewModeToggle }: NavbarProps) {
         </div>
 
         <div className="hidden items-center gap-2 md:flex">
+          {isAdmin && (
+            <Link
+              href="/admin"
+              className={cn(
+                buttonVariants({ variant: "outline", size: "sm" }),
+                "h-10 gap-2 border-primary/40 bg-primary/5 text-primary hover:bg-primary/10 hover:text-primary font-semibold",
+              )}
+            >
+              <ShieldCheck className="h-4 w-4" />
+              Panel Admin
+            </Link>
+          )}
           <Link
             href="/laporan/baru"
             className="flex h-10 items-center gap-2 rounded-md bg-secondary px-3 text-sm font-semibold text-secondary-foreground transition-colors duration-150 ease-out hover:bg-secondary/90 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
