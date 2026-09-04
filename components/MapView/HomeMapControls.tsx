@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Filter, Flame, MapPin, RotateCcw, Search, X, Eye } from "lucide-react";
 
 import { CATEGORY_LABELS, REPORT_CATEGORIES, REPORT_STATUSES, STATUS_LABELS } from "@/lib/constants/reports";
@@ -51,7 +51,18 @@ export default function HomeMapControls({
   onSelectSearchResult,
 }: HomeMapControlsProps) {
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const prevNonUnseenMode = useRef<"pin" | "heatmap">("pin");
+
+  // Ingat mode pin/heatmap terakhir agar menonaktifkan lapisan Persepsi
+  // kembali ke mode sebelumnya, bukan selalu kembali ke "pin".
+  useEffect(() => {
+    if (viewMode !== "unseen") {
+      prevNonUnseenMode.current = viewMode;
+    }
+  }, [viewMode]);
+
   const hasFilters = selectedCategory !== "all" || selectedStatus !== "all";
+  const hasLayerActive = hasFilters || viewMode === "unseen";
   const showDropdown = query.trim().length > 0 && Array.isArray(searchResults);
 
   function handlePickResult(report: Report) {
@@ -127,7 +138,7 @@ export default function HomeMapControls({
             )}
           </label>
 
-          {/* Secondary toolbar: result count, filter, demoted map-mode toggles */}
+          {/* Secondary toolbar: result count, filter, segmented map-mode control */}
           <div className="flex items-center gap-2">
             <p
               className="text-xs font-medium text-on-surface-variant"
@@ -150,61 +161,46 @@ export default function HomeMapControls({
             >
               <Filter className="h-3.5 w-3.5" />
               Filter
-              {hasFilters && (
+              {hasLayerActive && (
                 <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-surface bg-secondary" />
               )}
             </Button>
 
-            <button
-              type="button"
-              aria-pressed={viewMode === "pin"}
-              onClick={() => onViewModeChange("pin")}
-              className={cn(
-                "ml-auto flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                viewMode === "pin"
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-outline-variant/70 bg-surface-lowest/90 text-on-surface-variant hover:border-outline-variant hover:text-primary",
-              )}
+            <div
+              role="group"
+              aria-label="Mode tampilan peta"
+              className="ml-auto flex h-8 shrink-0 items-center gap-0.5 rounded-full border border-outline-variant/70 bg-surface-lowest/90 p-0.5"
             >
-              <MapPin className="h-3.5 w-3.5" />
-              Pin
-            </button>
+              <button
+                type="button"
+                aria-pressed={viewMode === "pin"}
+                onClick={() => onViewModeChange("pin")}
+                className={cn(
+                  "flex h-7 shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  viewMode === "pin"
+                    ? "bg-primary/10 text-primary"
+                    : "text-on-surface-variant hover:bg-surface-container hover:text-primary",
+                )}
+              >
+                <MapPin className="h-3.5 w-3.5" />
+                Pin
+              </button>
 
-            <button
-              type="button"
-              aria-pressed={viewMode === "heatmap"}
-              onClick={() =>
-                onViewModeChange(viewMode === "heatmap" ? "pin" : "heatmap")
-              }
-              className={cn(
-                "flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-all duration-150 ease-out active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                viewMode === "heatmap"
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-outline-variant/70 bg-surface-lowest/90 text-on-surface-variant hover:border-outline-variant hover:text-primary",
-              )}
-            >
-              <Flame className="h-3.5 w-3.5" />
-              Heatmap
-            </button>
-
-            <span aria-hidden="true" className="h-4 w-px bg-outline-variant/40" />
-
-            <button
-              type="button"
-              aria-pressed={viewMode === "unseen"}
-              onClick={() =>
-                onViewModeChange(viewMode === "unseen" ? "pin" : "unseen")
-              }
-              className={cn(
-                "flex h-8 shrink-0 cursor-pointer items-center gap-1 rounded-full px-2.5 text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                viewMode === "unseen"
-                  ? "bg-primary/10 text-primary"
-                  : "text-outline hover:bg-surface-container hover:text-primary",
-              )}
-            >
-              <Eye className="h-3 w-3" />
-              Persepsi
-            </button>
+              <button
+                type="button"
+                aria-pressed={viewMode === "heatmap"}
+                onClick={() => onViewModeChange("heatmap")}
+                className={cn(
+                  "flex h-7 shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  viewMode === "heatmap"
+                    ? "bg-primary/10 text-primary"
+                    : "text-on-surface-variant hover:bg-surface-container hover:text-primary",
+                )}
+              >
+                <Flame className="h-3.5 w-3.5" />
+                Heatmap
+              </button>
+            </div>
           </div>
 
           {viewMode === "heatmap" && (
@@ -216,7 +212,7 @@ export default function HomeMapControls({
           {viewMode === "unseen" && (
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-xs text-outline">
-                Ketuk lokasi di peta untuk memberi persepsi.
+                Ketuk peta untuk melihat persepsi warga di area tersebut.
               </p>
               {showDaysFilter && (
                 <div className="ml-auto flex items-center gap-1">
@@ -300,6 +296,43 @@ export default function HomeMapControls({
               <p className="text-xs text-outline sm:col-span-3">
                 {totalResults} laporan sesuai pencarian dan filter
               </p>
+
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-outline-variant/40 bg-surface-low p-3 sm:col-span-3">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <Eye className="h-4 w-4 shrink-0 text-primary" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-on-surface">
+                      Lapisan Persepsi
+                    </p>
+                    <p className="text-xs leading-snug text-outline">
+                      Tampilkan persepsi warga tentang suasana di setiap titik.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={viewMode === "unseen"}
+                  aria-label="Aktifkan lapisan persepsi"
+                  onClick={() =>
+                    onViewModeChange(
+                      viewMode === "unseen" ? prevNonUnseenMode.current : "unseen",
+                    )
+                  }
+                  className={cn(
+                    "relative h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface-lowest",
+                    viewMode === "unseen" ? "bg-primary" : "bg-outline-variant",
+                  )}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      "absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-surface-lowest shadow-sm transition-transform duration-150 ease-out",
+                      viewMode === "unseen" && "translate-x-5",
+                    )}
+                  />
+                </button>
+              </div>
             </div>
           )}
         </div>

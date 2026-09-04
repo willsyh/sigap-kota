@@ -116,7 +116,7 @@ export default function AreaPulsePopup({
       <div className="flex items-start justify-between gap-2">
         <div>
           <h3 className="font-heading text-sm font-bold text-on-surface">
-            Unseen Pulse
+            Denyut Persepsi
           </h3>
           <p className="mt-0.5 text-xs text-on-surface-variant">
             {total} respons dalam radius 300m

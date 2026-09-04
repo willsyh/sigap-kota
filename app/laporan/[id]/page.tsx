@@ -394,12 +394,12 @@ export default function ReportDetailPage() {
           <p className="max-w-xs text-xs leading-4 text-outline">{hasVoted ? "Anda sudah menandai laporan ini sebagai prioritas." : "Dukung agar laporan ini mendapat prioritas penanganan."}</p>
         </section>
 
-        {/* Unseen: persepsi warga terhadap area laporan */}
+        {/* Persepsi: persepsi warga terhadap area laporan */}
         <section className="space-y-2">
           <div className="flex items-center justify-between gap-3">
             <h3 className="flex items-center gap-2 font-heading text-xl font-semibold">
               <Eye className="h-5 w-5 text-primary" />
-              Unseen
+              Persepsi
             </h3>
             <span className="text-xs tabular-nums text-outline">{perceptions.length} respons</span>
           </div>

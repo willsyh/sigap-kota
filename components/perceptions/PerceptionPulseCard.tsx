@@ -79,7 +79,7 @@ export default function PerceptionPulseCard({
     <div className="w-full max-w-xs rounded-xl border border-outline-variant/50 bg-surface-lowest/95 p-4 shadow-[0_8px_30px_rgba(0,83,91,0.14)] backdrop-blur-md">
       <div className="flex items-baseline justify-between gap-2">
         <h3 className="font-heading text-sm font-bold text-on-surface">
-          Unseen Pulse
+          Denyut Persepsi
         </h3>
         <span className="text-xs tabular-nums text-outline">
           radius 300 m

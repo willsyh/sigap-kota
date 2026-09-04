@@ -93,7 +93,7 @@ export default function AdminPersepsiPage() {
         <div>
           <h1 className="font-heading text-2xl font-bold">Persepsi Warga</h1>
           <p className="text-sm text-outline">
-            Unseen Insight — apa yang dirasakan warga 30 hari terakhir.
+            Wawasan Persepsi — apa yang dirasakan warga 30 hari terakhir.
           </p>
         </div>
         <Button
@@ -112,7 +112,7 @@ export default function AdminPersepsiPage() {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="font-heading text-xl font-semibold text-on-surface">
-              Unseen Insight
+              Wawasan Persepsi
             </h2>
             <p className="mt-1 text-xs text-outline">
               Persepsi agregat warga untuk mendeteksi masalah sebelum laporan

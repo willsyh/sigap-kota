@@ -85,20 +85,25 @@ export default function MapLegend({ viewMode = "pin" }: MapLegendProps) {
           </div>
 
           {viewMode === "pin" && (
-            <ul className="space-y-1.5">
-              {PIN_LEGEND_ITEMS.map((item) => (
-                <li
-                  key={item.label}
-                  className="flex items-center gap-2 text-xs text-on-surface-variant"
-                >
-                  <span
-                    aria-hidden="true"
-                    className={`h-2.5 w-2.5 shrink-0 rounded-full ${item.dotClass}`}
-                  />
-                  {item.label}
-                </li>
-              ))}
-            </ul>
+            <>
+              <ul className="space-y-1.5">
+                {PIN_LEGEND_ITEMS.map((item) => (
+                  <li
+                    key={item.label}
+                    className="flex items-center gap-2 text-xs text-on-surface-variant"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={`h-2.5 w-2.5 shrink-0 rounded-full ${item.dotClass}`}
+                    />
+                    {item.label}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 border-t border-outline-variant/30 pt-1.5 text-[11px] leading-snug text-outline">
+                Menunggu konfirmasi petugas sebelum laporan diproses.
+              </p>
+            </>
           )}
 
           {viewMode === "heatmap" && (

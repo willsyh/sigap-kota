@@ -276,7 +276,7 @@ export default function AdminDashboardPage() {
         >
           <div>
             <p className="font-heading text-sm font-semibold">Persepsi Warga</p>
-            <p className="text-xs text-outline">Unseen Insight & sentimen</p>
+            <p className="text-xs text-outline">Wawasan Persepsi & sentimen</p>
           </div>
           <Eye className="h-5 w-5 text-secondary" />
         </Link>

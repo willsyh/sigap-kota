@@ -271,7 +271,7 @@ export default async function HomePage() {
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600">
                 <Layers className="h-5 w-5" />
               </div>
-              <h4 className="font-heading font-bold text-on-surface">Lapisan Persepsi (Pulse)</h4>
+              <h4 className="font-heading font-bold text-on-surface">Lapisan Persepsi</h4>
               <p className="text-xs text-on-surface-variant leading-relaxed">
                 Merekam rasa aman, tingkat penerangan, dan kenyamanan pejalan kaki di setiap sudut kota untuk audit tata kota yang inklusif.
               </p>
