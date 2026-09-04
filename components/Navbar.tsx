@@ -7,6 +7,7 @@ import {
   CircleHelp,
   CirclePlus,
   FileText,
+  Info as InfoIcon,
   Layers3,
   Loader2,
   LogIn,
@@ -74,7 +75,8 @@ export default function Navbar({ viewMode, onViewModeToggle }: NavbarProps) {
 
   const isAdmin = user?.user_metadata?.role === "admin";
   const navItems = [
-    { href: "/", label: "Peta", icon: Map },
+    { href: "/", label: "Tentang", icon: InfoIcon },
+    { href: "/peta", label: "Peta", icon: Map },
     { href: "/laporan", label: "Laporan", icon: FileText },
     ...(!isAdmin
       ? [{ href: "/panduan", label: "Panduan", icon: CircleHelp }]
@@ -190,7 +192,7 @@ export default function Navbar({ viewMode, onViewModeToggle }: NavbarProps) {
           </button>
         ) : (
           <Link
-            href="/"
+            href="/peta"
             aria-label="Buka tampilan peta"
             className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full text-on-surface-variant transition-colors duration-150 ease-out hover:bg-surface-container hover:text-primary active:scale-[0.95] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
           >

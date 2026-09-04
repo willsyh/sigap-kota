@@ -98,13 +98,19 @@ export default function BottomNav() {
   const tabs: TabItem[] = [
     {
       href: "/",
-      label: "Beranda",
+      label: "Tentang",
       icon: Map,
       isActive: pathname === "/",
     },
     {
+      href: "/peta",
+      label: "Peta",
+      icon: Map,
+      isActive: pathname.startsWith("/peta"),
+    },
+    {
       href: "/laporan",
-      label: "Aktivitas",
+      label: "Laporan",
       icon: BarChart3,
       isActive:
         pathname.startsWith("/laporan") && !pathname.startsWith("/laporan/baru"),
