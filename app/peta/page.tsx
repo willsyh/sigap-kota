@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect, useSyncExternalStore } from "react";
+import { useState, useMemo, useCallback, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Navbar from "@/components/Navbar";
@@ -10,19 +10,13 @@ import MapLegend from "@/components/MapView/MapLegend";
 import PerceptionDialog from "@/components/perceptions/PerceptionDialog";
 import type {
   PerceptionPoint,
-  PerceptionSentiment,
 } from "@/components/perceptions/PerceptionPulseCard";
 import AreaPulsePopup from "@/components/perceptions/AreaPulsePopup";
 import {
   CATEGORY_LABELS,
   STATUS_LABELS,
+  STATUS_META,
 } from "@/lib/constants/reports";
-import {
-  PERCEPTION_SENTIMENTS,
-  PERCEPTION_SENTIMENT_COLORS,
-  PERCEPTION_SENTIMENT_LABELS,
-} from "@/lib/constants/perceptions";
-import { createClient } from "@/lib/supabase/client";
 import type { Report, ReportCategory, ReportStatus } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -96,7 +90,6 @@ export default function MapPage() {
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [viewMode, setViewMode] = useState<"pin" | "heatmap" | "unseen">("pin");
   const [query, setQuery] = useState("");
-  const [isAdmin, setIsAdmin] = useState(false);
   const [days, setDays] = useState<7 | 30>(7);
   const [dialogPoint, setDialogPoint] = useState<{ lat: number; lng: number } | null>(null);
   const [pulsePoint, setPulsePoint] = useState<{ lat: number; lng: number } | null>(null);
@@ -111,14 +104,6 @@ export default function MapPage() {
     queryFn: () => fetchPerceptions(days),
     enabled: viewMode === "unseen",
   });
-
-  useEffect(() => {
-    let active = true;
-    createClient().auth.getUser().then(({ data }) => {
-      if (active) setIsAdmin(data.user?.user_metadata?.role === "admin");
-    });
-    return () => { active = false; };
-  }, []);
 
   const introDismissed = useSyncExternalStore(
     introStore.subscribe,
@@ -219,13 +204,6 @@ export default function MapPage() {
       ? selectedReport
       : null;
 
-  const statusDotClass: Record<ReportStatus, string> = {
-    dilaporkan: "bg-outline",
-    diproses: "bg-secondary",
-    menunggu_konfirmasi: "bg-amber-400",
-    selesai: "bg-tertiary",
-  };
-
   return (
     <div className="flex h-[calc(100dvh-(5rem+env(safe-area-inset-bottom)))] flex-col overflow-hidden bg-surface md:h-screen">
       <Navbar
@@ -250,7 +228,6 @@ export default function MapPage() {
           days={days}
           onDaysChange={setDays}
           totalResults={filteredReports.length}
-          isAdmin={isAdmin}
           searchResults={filteredReports.slice(0, 5)}
           onSelectSearchResult={handleSelectReport}
         />
@@ -336,9 +313,7 @@ export default function MapPage() {
                 </button>
               </div>
               <p className="mt-2 text-sm leading-relaxed text-on-surface-variant">
-                SigapKota mempertemukan warga dan pemerintah kota. Laporkan jalan rusak,
-                sampah menumpuk, atau banjir di sekitar Anda, lalu ikuti proses
-                penanganannya secara transparan sampai tuntas.
+                Laporkan jalan rusak, sampah menumpuk, atau banjir di sekitar Anda, lalu pantau penanganannya sampai tuntas.
               </p>
 
               <dl className="anim-fade-up anim-delay-1 mt-4 grid grid-cols-3 divide-x divide-outline-variant/30 rounded-xl bg-surface-low py-3 text-center">
@@ -419,32 +394,23 @@ export default function MapPage() {
             )
           )}
 
-          {/* Legenda warna pin (hanya relevan pada mode pin) */}
-          {!isLoading && !isError && viewMode === "pin" && <MapLegend />}
+          {/* Legenda peta: konten mengikuti mode tampilan aktif */}
+          {!isLoading && !isError && <MapLegend viewMode={viewMode} />}
 
-          {/* Mode unseen: legenda persepsi + status muat/kosong */}
-          {!isLoading && !isError && viewMode === "unseen" && (
-            <div className="absolute right-4 top-[7.25rem] z-20 rounded-xl border border-outline-variant/50 bg-surface-lowest/95 p-3 shadow-[0_8px_30px_rgba(0,83,91,0.12)] backdrop-blur-md md:right-8">
-              <p className="mb-2 text-xs font-semibold text-on-surface">Persepsi Warga</p>
-              <ul className="space-y-1.5">
-                {PERCEPTION_SENTIMENTS.map((sentiment: PerceptionSentiment) => (
-                  <li
-                    key={sentiment}
-                    className="flex items-center gap-2 text-xs text-on-surface-variant"
-                  >
-                    <span
-                      aria-hidden="true"
-                      className="h-2.5 w-2.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: PERCEPTION_SENTIMENT_COLORS[sentiment] }}
-                    />
-                    {PERCEPTION_SENTIMENT_LABELS[sentiment].label}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          {!isLoading &&
+            !isError &&
+            viewMode === "heatmap" &&
+            reports.length > 0 &&
+            reports.length < 3 && (
+              <div className="absolute left-1/2 top-[55%] z-20 w-[calc(100%-2rem)] max-w-xs -translate-x-1/2 rounded-xl border border-outline-variant/50 bg-surface-lowest/95 p-3 text-center text-xs text-outline shadow-sm backdrop-blur-md">
+                Data laporan masih sedikit di area ini. Zona padat akan terlihat jelas saat lebih banyak laporan masuk.
+              </div>
+            )}
 
-          {!isLoading && !isError && viewMode === "unseen" && perceptionsLoading && (
+          {!isLoading &&
+            !isError &&
+            viewMode === "unseen" &&
+            perceptionsLoading && (
             <div className="absolute left-1/2 top-[55%] z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-outline-variant/60 bg-surface-lowest/95 px-4 py-2 text-xs text-on-surface-variant shadow-sm backdrop-blur-md">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
               Memuat persepsi...
@@ -508,7 +474,7 @@ export default function MapPage() {
                       {CATEGORY_LABELS[visibleSelectedReport.category]}
                     </span>
                     <span className="ml-auto flex shrink-0 items-center gap-1.5 text-xs font-medium text-outline">
-                      <span className={`h-2 w-2 rounded-full ${statusDotClass[visibleSelectedReport.status]}`} />
+                      <span className={`h-2 w-2 rounded-full ${STATUS_META[visibleSelectedReport.status].dotClassName}`} />
                       {STATUS_LABELS[visibleSelectedReport.status]}
                     </span>
                   </div>

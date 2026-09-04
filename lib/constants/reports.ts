@@ -35,9 +35,10 @@ export const CATEGORY_COLORS: Record<ReportCategory, string> = {
  * Warna semantik untuk setiap status laporan.
  * - neutral: abu-abu netral (laporan baru, belum ada tindakan)
  * - amber: sedang berjalan / menunggu tindakan
+ * - blue: menunggu konfirmasi warga sebelum ditutup
  * - green: selesai ditangani
  */
-export type StatusColorSemantic = "neutral" | "amber" | "green";
+export type StatusColorSemantic = "neutral" | "amber" | "blue" | "green";
 
 export type StatusBadgeVariant = "default" | "secondary" | "outline";
 
@@ -48,6 +49,8 @@ export interface StatusMeta {
   color: StatusColorSemantic;
   /** Variant komponen Badge (ui/badge.tsx) */
   badgeVariant: StatusBadgeVariant;
+  /** Warna hex untuk pin peta */
+  mapColor: string;
   /** Kelas Tailwind untuk pill status kustom (span dengan border) */
   pillClassName: string;
   /** Kelas Tailwind untuk titik indikator di dalam pill */
@@ -64,6 +67,7 @@ export const STATUS_META: Record<ReportStatus, StatusMeta> = {
     label: "Dilaporkan",
     color: "neutral",
     badgeVariant: "outline",
+    mapColor: "#6f797a",
     pillClassName:
       "border-outline-variant/40 bg-surface-container text-on-surface-variant",
     dotClassName: "bg-outline",
@@ -72,21 +76,24 @@ export const STATUS_META: Record<ReportStatus, StatusMeta> = {
     label: "Diproses",
     color: "amber",
     badgeVariant: "secondary",
+    mapColor: "#d97706",
     pillClassName:
       "border-secondary/20 bg-secondary-container/20 text-on-secondary-container",
     dotClassName: "bg-secondary",
   },
   menunggu_konfirmasi: {
     label: "Menunggu Konfirmasi",
-    color: "amber",
+    color: "blue",
     badgeVariant: "outline",
-    pillClassName: "border-amber-300/50 bg-amber-50 text-amber-700",
-    dotClassName: "bg-amber-400",
+    mapColor: "#0284c7",
+    pillClassName: "border-sky-300/50 bg-sky-50 text-sky-700",
+    dotClassName: "bg-sky-600",
   },
   selesai: {
     label: "Selesai",
     color: "green",
     badgeVariant: "default",
+    mapColor: "#15803d",
     pillClassName: "border-tertiary/15 bg-tertiary/10 text-tertiary",
     dotClassName: "bg-tertiary",
   },

@@ -3,15 +3,29 @@
 import { useState } from "react";
 import { ChevronDown, MapPin } from "lucide-react";
 
+import { REPORT_STATUSES, STATUS_META } from "@/lib/constants/reports";
+import {
+  PERCEPTION_SENTIMENTS,
+  PERCEPTION_SENTIMENT_COLORS,
+  PERCEPTION_SENTIMENT_LABELS,
+} from "@/lib/constants/perceptions";
+import type { PerceptionSentiment } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 
-// Warna harus konsisten dengan createCustomIcon di MapComponent.tsx:
-// dilaporkan = abu netral, diproses/menunggu konfirmasi = amber, selesai = hijau.
-const LEGEND_ITEMS = [
-  { label: "Dilaporkan", dotClass: "bg-[#6f797a]" },
-  { label: "Sedang ditangani", dotClass: "bg-[#d97706]" },
-  { label: "Selesai", dotClass: "bg-[#15803d]" },
-];
+interface MapLegendProps {
+  viewMode?: "pin" | "heatmap" | "unseen";
+}
+
+const PIN_LEGEND_ITEMS = REPORT_STATUSES.map((status) => ({
+  label: STATUS_META[status].label,
+  dotClass: STATUS_META[status].dotClassName,
+}));
+
+const MODE_LABELS: Record<"pin" | "heatmap" | "unseen", string> = {
+  pin: "Status",
+  heatmap: "Densitas",
+  unseen: "Sentimen",
+};
 
 // Crossfade dua arah antara chip dan kartu: kedua state dirender bertumpuk
 // dalam container relative yang ukurannya ditentukan chip. Transisi hanya
@@ -19,7 +33,7 @@ const LEGEND_ITEMS = [
 // height/width. State non-aktif tetap ter-mount namun tidak bisa diklik
 // (pointer-events-none), tidak bisa difokuskan (tabIndex -1), dan disembunyikan
 // dari screen reader (aria-hidden).
-export default function MapLegend() {
+export default function MapLegend({ viewMode = "pin" }: MapLegendProps) {
   const [open, setOpen] = useState(false);
 
   const stateClasses = open
@@ -56,7 +70,9 @@ export default function MapLegend() {
           )}
         >
           <div className="mb-2 flex items-center justify-between gap-2">
-            <p className="text-xs font-semibold text-on-surface">Legenda Peta</p>
+            <p className="text-xs font-semibold text-on-surface">
+              Legenda Peta · {MODE_LABELS[viewMode]}
+            </p>
             <button
               type="button"
               aria-label="Tutup legenda"
@@ -67,20 +83,57 @@ export default function MapLegend() {
               <ChevronDown className="h-4 w-4" />
             </button>
           </div>
-          <ul className="space-y-1.5">
-            {LEGEND_ITEMS.map((item) => (
-              <li
-                key={item.label}
-                className="flex items-center gap-2 text-xs text-on-surface-variant"
-              >
-                <span
-                  aria-hidden="true"
-                  className={`h-2.5 w-2.5 shrink-0 rounded-full ${item.dotClass}`}
-                />
-                {item.label}
-              </li>
-            ))}
-          </ul>
+
+          {viewMode === "pin" && (
+            <ul className="space-y-1.5">
+              {PIN_LEGEND_ITEMS.map((item) => (
+                <li
+                  key={item.label}
+                  className="flex items-center gap-2 text-xs text-on-surface-variant"
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`h-2.5 w-2.5 shrink-0 rounded-full ${item.dotClass}`}
+                  />
+                  {item.label}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {viewMode === "heatmap" && (
+            <div className="space-y-1.5">
+              <div
+                className="h-2 w-full rounded-full"
+                style={{
+                  background:
+                    "linear-gradient(to right, #14b8a6, #eab308, #f97316, #b91c1c)",
+                }}
+              />
+              <div className="flex items-center justify-between text-xs text-on-surface-variant">
+                <span>Rendah</span>
+                <span>Tinggi</span>
+              </div>
+            </div>
+          )}
+
+          {viewMode === "unseen" && (
+            <ul className="space-y-1.5">
+              {PERCEPTION_SENTIMENTS.map((sentiment: PerceptionSentiment) => (
+                <li
+                  key={sentiment}
+                  className="flex items-center gap-2 text-xs text-on-surface-variant"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: PERCEPTION_SENTIMENT_COLORS[sentiment] }}
+                  />
+                  {PERCEPTION_SENTIMENT_LABELS[sentiment].label}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
     </div>

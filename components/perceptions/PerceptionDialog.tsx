@@ -29,7 +29,6 @@ import {
 } from "@/components/ui/dialog";
 import {
   PERCEPTION_REASON_LABELS,
-  PERCEPTION_REASONS,
   PERCEPTION_SENTIMENTS,
   PERCEPTION_SENTIMENT_COLORS,
   PERCEPTION_SENTIMENT_LABELS,
@@ -48,6 +47,13 @@ const SENTIMENT_ICONS: Record<
   biasa: Meh,
   tidak_nyaman: Frown,
 };
+
+const REASON_GROUPS: { label?: string; reasons: PerceptionReason[] }[] = [
+  { label: "Kebersihan", reasons: ["kotor"] },
+  { label: "Lalu lintas", reasons: ["bising", "ramai", "jalan_buruk"] },
+  { label: "Keamanan", reasons: ["kurang_penerangan", "kurang_aman"] },
+  { reasons: ["lainnya"] },
+];
 
 interface PerceptionDialogProps {
   open: boolean;
@@ -374,27 +380,38 @@ export default function PerceptionDialog({
                     </button>
                   )}
 
-                  {/* Alasan */}
-                  <div className="flex flex-wrap gap-1.5">
-                    {PERCEPTION_REASONS.map((value) => {
-                      const selected = reason === value;
+                  {/* Alasan — grouped by theme */}
+                  <div className="space-y-2.5">
+                    {REASON_GROUPS.map((group) => (
+                      <div key={group.label ?? group.reasons[0]}>
+                        {group.label && (
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-outline mb-1.5">
+                            {group.label}
+                          </p>
+                        )}
+                        <div className="flex flex-wrap gap-1.5">
+                          {group.reasons.map((value) => {
+                            const selected = reason === value;
 
-                      return (
-                        <button
-                          key={value}
-                          type="button"
-                          onClick={() => setReason(selected ? null : value)}
-                          disabled={pending}
-                          className={`rounded-full h-9 px-3 text-xs font-medium border transition-all duration-150 ease-out active:scale-[0.97] ${
-                            selected
-                              ? "border-primary bg-primary/10 text-primary"
-                              : "border-outline-variant/35 bg-surface-lowest text-on-surface-variant hover:bg-surface-container"
-                          }`}
-                        >
-                          {PERCEPTION_REASON_LABELS[value]}
-                        </button>
-                      );
-                    })}
+                            return (
+                              <button
+                                key={value}
+                                type="button"
+                                onClick={() => setReason(selected ? null : value)}
+                                disabled={pending}
+                                className={`rounded-full h-9 px-3 text-xs font-medium border transition-all duration-150 ease-out active:scale-[0.97] ${
+                                  selected
+                                    ? "border-primary bg-primary/10 text-primary"
+                                    : "border-outline-variant/35 bg-surface-lowest text-on-surface-variant hover:bg-surface-container"
+                                }`}
+                              >
+                                {PERCEPTION_REASON_LABELS[value]}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
                   </div>
 
                   <Textarea

@@ -6,6 +6,7 @@ import L from "leaflet";
 
 import { OPENSTREETMAP_ATTRIBUTION, OPENSTREETMAP_TILE_URL } from "@/lib/constants/map";
 import { PERCEPTION_SENTIMENT_COLORS } from "@/lib/constants/perceptions";
+import { STATUS_META } from "@/lib/constants/reports";
 import type { Report } from "@/lib/types";
 import type { PerceptionPoint } from "@/components/perceptions/PerceptionPulseCard";
 
@@ -94,7 +95,7 @@ function HeatmapLayer({
           0.15: "#14b8a6",
           0.4: "#eab308",
           0.7: "#f97316",
-          1.0: "#dc2626",
+          1.0: "#b91c1c",
         },
       });
 
@@ -277,7 +278,7 @@ function MapViewController({
 
 // Helper to create status-colored HTML markers.
 // Semantic colors per DESIGN.md: dilaporkan = neutral gray,
-// diproses/menunggu_konfirmasi = amber, selesai = green.
+// diproses = amber, menunggu_konfirmasi = blue, selesai = green.
 // Each pin carries a category glyph (Lucide path data) so reports are
 // recognizable by shape as well as color.
 const CATEGORY_GLYPHS: Record<Report["category"], string> = {
@@ -298,13 +299,7 @@ function createCustomIcon(
   category: Report["category"],
   isSelected: boolean,
 ) {
-  const colorByStatus: Record<Report["status"], string> = {
-    dilaporkan: "#6f797a",
-    diproses: "#d97706",
-    menunggu_konfirmasi: "#b45309",
-    selesai: "#15803d",
-  };
-  const color = colorByStatus[status];
+  const color = STATUS_META[status].mapColor;
   const size = isSelected ? 42 : 34;
   const glyphSize = isSelected ? 16 : 13;
 

@@ -29,7 +29,6 @@ interface HomeMapControlsProps {
   days?: 7 | 30;
   onDaysChange?: (days: 7 | 30) => void;
   totalResults: number;
-  isAdmin: boolean;
   searchResults?: Report[];
   onSelectSearchResult?: (report: Report) => void;
 }
@@ -48,7 +47,6 @@ export default function HomeMapControls({
   days = 7,
   onDaysChange,
   totalResults,
-  isAdmin,
   searchResults,
   onSelectSearchResult,
 }: HomeMapControlsProps) {
@@ -129,7 +127,7 @@ export default function HomeMapControls({
             )}
           </label>
 
-          {/* Secondary toolbar: result count for everyone, demoted map-mode toggle */}
+          {/* Secondary toolbar: result count, filter, demoted map-mode toggles */}
           <div className="flex items-center gap-2">
             <p
               className="text-xs font-medium text-on-surface-variant"
@@ -138,26 +136,24 @@ export default function HomeMapControls({
               {totalResults} laporan cocok
             </p>
 
-            {isAdmin && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                aria-expanded={filtersOpen}
-                aria-controls="home-map-filter-panel"
-                onClick={() => setFiltersOpen((open) => !open)}
-                className={cn(
-                  "relative h-8 cursor-pointer gap-1.5 rounded-full border-outline-variant bg-surface-lowest px-3 text-xs font-medium shadow-none hover:bg-surface-container",
-                  filtersOpen && "border-primary bg-primary/5 text-primary",
-                )}
-              >
-                <Filter className="h-3.5 w-3.5" />
-                Filter
-                {hasFilters && (
-                  <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-surface bg-secondary" />
-                )}
-              </Button>
-            )}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              aria-expanded={filtersOpen}
+              aria-controls="home-map-filter-panel"
+              onClick={() => setFiltersOpen((open) => !open)}
+              className={cn(
+                "relative h-8 cursor-pointer gap-1.5 rounded-full border-outline-variant bg-surface-lowest px-3 text-xs font-medium shadow-none hover:bg-surface-container",
+                filtersOpen && "border-primary bg-primary/5 text-primary",
+              )}
+            >
+              <Filter className="h-3.5 w-3.5" />
+              Filter
+              {hasFilters && (
+                <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-surface bg-secondary" />
+              )}
+            </Button>
 
             <button
               type="button"
@@ -191,6 +187,8 @@ export default function HomeMapControls({
               Heatmap
             </button>
 
+            <span aria-hidden="true" className="h-4 w-px bg-outline-variant/40" />
+
             <button
               type="button"
               aria-pressed={viewMode === "unseen"}
@@ -198,14 +196,14 @@ export default function HomeMapControls({
                 onViewModeChange(viewMode === "unseen" ? "pin" : "unseen")
               }
               className={cn(
-                "flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "flex h-8 shrink-0 cursor-pointer items-center gap-1 rounded-full px-2.5 text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 viewMode === "unseen"
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-outline-variant/70 bg-surface-lowest/90 text-on-surface-variant hover:border-outline-variant hover:text-primary",
+                  ? "bg-primary/10 text-primary"
+                  : "text-outline hover:bg-surface-container hover:text-primary",
               )}
             >
-              <Eye className="h-3.5 w-3.5" />
-              Unseen
+              <Eye className="h-3 w-3" />
+              Persepsi
             </button>
           </div>
 
@@ -243,7 +241,7 @@ export default function HomeMapControls({
             </div>
           )}
 
-          {isAdmin && filtersOpen && (
+          {filtersOpen && (
             <div
               id="home-map-filter-panel"
               className="anim-slide-down grid gap-3 rounded-2xl border border-outline-variant/70 bg-surface-lowest p-3 shadow-lg sm:grid-cols-[1fr_1fr_auto] sm:items-end"
