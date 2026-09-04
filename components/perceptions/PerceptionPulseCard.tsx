@@ -14,6 +14,7 @@ export interface PerceptionPoint {
   longitude: number;
   sentiment: "nyaman" | "biasa" | "tidak_nyaman";
   reason: string | null;
+  photo_url: string | null;
   report_id: string | null;
   created_at: string;
 }
@@ -115,7 +116,7 @@ export default function PerceptionPulseCard({
                 </div>
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-container">
                   <div
-                    className="h-full rounded-full transition-all duration-300"
+                    className="anim-bar-grow h-full rounded-full transition-[width] duration-500 ease-out"
                     style={{
                       width: `${percentage}%`,
                       backgroundColor: PERCEPTION_SENTIMENT_COLORS[sentiment],

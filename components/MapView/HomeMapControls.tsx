@@ -87,7 +87,7 @@ export default function HomeMapControls({
                 type="button"
                 onClick={() => onQueryChange("")}
                 aria-label="Hapus pencarian"
-                className="absolute right-0 top-1/2 flex h-11 w-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-outline transition-colors hover:bg-surface-container hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="absolute right-0 top-1/2 flex h-11 w-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-outline transition-all duration-150 ease-out hover:bg-surface-container hover:text-primary active:scale-[0.95] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -97,7 +97,7 @@ export default function HomeMapControls({
               <div
                 role="listbox"
                 aria-label="Hasil pencarian laporan"
-                className="anim-scale-in absolute inset-x-0 top-full z-40 mt-1 overflow-hidden rounded-xl border border-outline-variant/60 bg-surface-lowest shadow-[0_8px_30px_rgba(0,83,91,0.14)]"
+                className="anim-slide-down absolute inset-x-0 top-full z-40 mt-1 overflow-hidden rounded-xl border border-outline-variant/60 bg-surface-lowest shadow-[0_8px_30px_rgba(0,83,91,0.14)]"
               >
                 {searchResults!.length === 0 ? (
                   <p className="px-3 py-2.5 text-xs text-outline">
@@ -246,7 +246,7 @@ export default function HomeMapControls({
           {isAdmin && filtersOpen && (
             <div
               id="home-map-filter-panel"
-              className="anim-scale-in grid gap-3 rounded-2xl border border-outline-variant/70 bg-surface-lowest p-3 shadow-lg sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+              className="anim-slide-down grid gap-3 rounded-2xl border border-outline-variant/70 bg-surface-lowest p-3 shadow-lg sm:grid-cols-[1fr_1fr_auto] sm:items-end"
             >
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-outline">Kategori</label>

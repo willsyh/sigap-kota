@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import BottomNav from "@/components/BottomNav";
+import ConnectivityBanner from "@/components/reports/ConnectivityBanner";
 import { Toaster } from "@/components/ui/sonner";
 
 import "leaflet/dist/leaflet.css";
@@ -27,6 +28,7 @@ export default function RootLayout({
           Lewati ke konten utama
         </a>
         <QueryProvider>
+          <ConnectivityBanner />
           <div id="konten-utama">{children}</div>
           <BottomNav />
           <Toaster richColors position="top-right" />

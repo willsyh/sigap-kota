@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   BarChart3,
-  CirclePlus,
+  Loader2,
   LogIn,
   LogOut,
   Map,
@@ -13,6 +13,7 @@ import {
   User,
 } from "lucide-react";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -40,6 +41,7 @@ export default function BottomNav() {
   const router = useRouter();
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const taskFocused =
     pathname.startsWith("/auth") ||
@@ -66,11 +68,31 @@ export default function BottomNav() {
   }, []);
 
   async function handleLogout() {
-    await createClient().auth.signOut();
-    setUser(null);
-    setAccountOpen(false);
-    router.push("/");
-    router.refresh();
+    if (loggingOut) return;
+
+    setLoggingOut(true);
+    const toastId = toast.loading("Sedang keluar...");
+
+    try {
+      const { error } = await createClient().auth.signOut();
+      if (error) throw error;
+
+      setUser(null);
+      setAccountOpen(false);
+      toast.success("Anda telah keluar.", {
+        id: toastId,
+        description: "Sesi akun sudah berakhir.",
+      });
+      router.push("/");
+      router.refresh();
+    } catch {
+      toast.error("Gagal keluar.", {
+        id: toastId,
+        description: "Silakan coba lagi.",
+      });
+    } finally {
+      setLoggingOut(false);
+    }
   }
 
   const tabs: TabItem[] = [
@@ -86,12 +108,6 @@ export default function BottomNav() {
       icon: BarChart3,
       isActive:
         pathname.startsWith("/laporan") && !pathname.startsWith("/laporan/baru"),
-    },
-    {
-      href: "/laporan/baru",
-      label: "Lapor",
-      icon: CirclePlus,
-      isActive: pathname.startsWith("/laporan/baru"),
     },
     ...(user?.user_metadata?.role === "admin"
       ? [
@@ -121,8 +137,6 @@ export default function BottomNav() {
 
   if (taskFocused) return null;
 
-  const elevateReportAction = pathname === "/laporan";
-
   return (
     <nav
       aria-label="Navigasi utama"
@@ -150,39 +164,28 @@ export default function BottomNav() {
             );
           }
 
-          if (tab.href === "/laporan/baru" && elevateReportAction) {
-            return (
-              <Link
-                key={tab.href}
-                href={tab.href}
-                className="group relative flex min-w-0 flex-1 flex-col items-center justify-end gap-1 pb-2 text-[11px] font-medium text-outline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-              >
-                <span className="absolute -top-5 flex h-14 w-14 items-center justify-center rounded-full bg-secondary text-secondary-foreground shadow-[0_6px_20px_rgba(142,78,20,0.28)] transition-all duration-150 ease-out group-hover:bg-secondary/90 group-active:scale-[0.94]">
-                  <Icon className="h-7 w-7" strokeWidth={2.2} />
-                </span>
-                {tab.label}
-              </Link>
-            );
-          }
-
           return (
             <Link
               key={tab.href}
               href={tab.href}
               aria-current={tab.isActive ? "page" : undefined}
               className={cn(
-                "relative flex min-w-0 flex-1 flex-col items-center justify-center gap-1 py-2 text-[11px] transition-colors duration-150 ease-out hover:bg-surface-container/60 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                "group relative flex min-w-0 flex-1 flex-col items-center justify-center gap-1 py-2 text-[11px] transition-colors duration-150 ease-out hover:text-primary active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
                 tab.isActive
                   ? "font-semibold text-primary"
-                  : "font-medium text-outline hover:text-primary",
+                  : "font-medium text-outline",
               )}
             >
               <span
-                className="relative flex h-8 w-10 items-center justify-center"
+                className={cn(
+                  "relative flex h-11 w-11 items-center justify-center rounded-full transition-colors duration-200 ease-out group-hover:bg-surface-container/70",
+                  tab.isActive &&
+                    "bottom-nav-active-icon bg-primary text-primary-foreground shadow-[0_7px_18px_rgba(0,83,91,0.28)] ring-4 ring-surface group-hover:bg-primary/90",
+                )}
               >
                 <Icon className="h-6 w-6" strokeWidth={tab.isActive ? 2.4 : 2} />
                 {tab.hasNotification && (
-                  <span className="absolute right-1.5 top-0.5 h-2.5 w-2.5 rounded-full border-2 border-surface bg-destructive" />
+                  <span className="anim-pop absolute right-1.5 top-0.5 h-2.5 w-2.5 rounded-full border-2 border-surface bg-destructive" />
                 )}
               </span>
               {tab.label}
@@ -198,9 +201,19 @@ export default function BottomNav() {
             <DialogDescription>{user?.email}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" size="sm" onClick={handleLogout}>
-              <LogOut className="h-3.5 w-3.5" />
-              Keluar
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              disabled={loggingOut}
+              aria-busy={loggingOut}
+            >
+              {loggingOut ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              ) : (
+                <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              {loggingOut ? "Keluar..." : "Keluar"}
             </Button>
           </DialogFooter>
         </DialogContent>

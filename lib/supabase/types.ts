@@ -145,6 +145,7 @@ export interface Database {
           sentiment: Database["public"]["Enums"]["perception_sentiment"];
           reason: Database["public"]["Enums"]["perception_reason"] | null;
           note: string | null;
+          photo_url: string | null;
           report_id: string | null;
           created_at: string;
         };
@@ -156,6 +157,7 @@ export interface Database {
           sentiment: Database["public"]["Enums"]["perception_sentiment"];
           reason?: Database["public"]["Enums"]["perception_reason"] | null;
           note?: string | null;
+          photo_url?: string | null;
           report_id?: string | null;
           created_at?: string;
         };
@@ -167,6 +169,7 @@ export interface Database {
           sentiment?: Database["public"]["Enums"]["perception_sentiment"];
           reason?: Database["public"]["Enums"]["perception_reason"] | null;
           note?: string | null;
+          photo_url?: string | null;
           report_id?: string | null;
           created_at?: string;
         };

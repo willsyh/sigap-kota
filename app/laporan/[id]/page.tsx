@@ -275,7 +275,7 @@ export default function ReportDetailPage() {
 
         {/* Info antrean untuk laporan berstatus dilaporkan */}
         {report.status === "dilaporkan" && (
-          <div className="anim-fade-in flex items-start gap-2.5 rounded-xl border border-outline-variant/30 bg-surface-low px-4 py-3">
+          <div className="anim-slide-down flex items-start gap-2.5 rounded-xl border border-outline-variant/30 bg-surface-low px-4 py-3">
             <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
             <p className="text-sm leading-relaxed text-on-surface-variant">
               Laporan Anda masuk antrean tinjauan. Pantau statusnya di halaman ini.
@@ -330,7 +330,7 @@ export default function ReportDetailPage() {
                   </div>
                   <span className="absolute right-4 top-4 rounded-full bg-black/60 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white backdrop-blur">Sebelum</span>
                   <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 z-10 w-1 -translate-x-1/2 bg-white shadow-lg" style={{ left: `${sliderPosition}%` }}>
-                    <span className="absolute left-1/2 top-1/2 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white text-outline shadow-md"><MoveHorizontal className="h-4 w-4" /></span>
+                    <span className="anim-shimmer absolute left-1/2 top-1/2 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white text-outline shadow-md"><MoveHorizontal className="h-4 w-4" /></span>
                   </div>
                   <input type="range" min="0" max="100" value={sliderPosition} onChange={(event) => setSliderPosition(Number(event.target.value))} aria-label="Bandingkan foto sebelum dan sesudah" className="absolute inset-0 z-20 h-full w-full cursor-ew-resize opacity-0" />
                 </>
@@ -435,7 +435,7 @@ export default function ReportDetailPage() {
                         </div>
                         <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-container">
                           <div
-                            className="h-full rounded-full transition-all"
+                            className="anim-bar-grow h-full rounded-full transition-[width] duration-500 ease-out"
                             style={{ width: `${percentage}%`, backgroundColor: PERCEPTION_SENTIMENT_COLORS[sentiment] }}
                           />
                         </div>
@@ -476,7 +476,7 @@ export default function ReportDetailPage() {
           <div className="relative ml-4 space-y-6 border-l-2 border-surface-highest py-1 pl-6">
             {activity.length > 0 ? activity.map((log, index) => (
               <div key={log.id} className="relative">
-                <span className={`absolute -left-[33px] top-1 h-4 w-4 rounded-full border-4 border-surface ${index === 0 ? "bg-primary ring-2 ring-primary/10" : "bg-outline-variant"}`} />
+                <span className={`absolute -left-[33px] top-1 h-4 w-4 rounded-full border-4 border-surface ${index === 0 ? "anim-pop bg-primary ring-2 ring-primary/10" : "bg-outline-variant"}`} />
                 <div className={index === 0 ? "rounded-lg border border-surface-highest bg-surface-lowest p-3 shadow-sm" : ""}>
                   <p className="font-medium text-on-surface">{STATUS_META[log.new_status as ReportStatus]?.label ?? log.new_status}</p>
                   <p className="mt-1 text-xs text-outline">{log.changed_at ? new Date(log.changed_at).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : ""}</p>
@@ -484,7 +484,7 @@ export default function ReportDetailPage() {
               </div>
             )) : (
               <div className="relative">
-                <span className="absolute -left-[33px] top-1 h-4 w-4 rounded-full border-4 border-surface bg-primary ring-2 ring-primary/10" />
+                <span className="anim-pop absolute -left-[33px] top-1 h-4 w-4 rounded-full border-4 border-surface bg-primary ring-2 ring-primary/10" />
                 <div className="rounded-lg border border-surface-highest bg-surface-lowest p-3 shadow-sm">
                   <p className="font-medium text-on-surface">{statusMeta.label}</p>
                   <p className="mt-1 text-xs text-outline">{reportedDate.toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</p>

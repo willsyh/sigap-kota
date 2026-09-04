@@ -4,7 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AuthError } from "@supabase/supabase-js";
-import { Eye, EyeOff, Loader2, LockKeyhole, Mail } from "lucide-react";
+import { CheckCircle2, Eye, EyeOff, Loader2, LockKeyhole, Mail } from "lucide-react";
+import { toast } from "sonner";
 
 import CivicBrandMark from "@/components/CivicBrandMark";
 import { Button } from "@/components/ui/button";
@@ -18,20 +19,25 @@ interface AuthFormProps {
 const GENERIC_AUTH_ERROR = "Terjadi kesalahan. Coba lagi sebentar.";
 
 function mapAuthErrorMessage(error: unknown): string {
-  if (!(error instanceof AuthError)) return GENERIC_AUTH_ERROR;
-  switch (error.code) {
-    case "invalid_credentials": return "Email atau kata sandi salah.";
-    case "email_not_confirmed": return "Email belum dikonfirmasi. Cek kotak masuk Anda.";
-    case "user_already_exists": return "Email sudah terdaftar. Silakan masuk.";
-    case "weak_password": return "Kata sandi terlalu lemah. Gunakan minimal 6 karakter.";
-    case "over_request_rate_limit":
-    case "over_email_send_rate_limit": return "Terlalu banyak percobaan. Coba lagi nanti.";
+  if (error instanceof AuthError) {
+    const code = error.code ?? "";
+    const msg = error.message ?? "";
+
+    if (code === "invalid_credentials" || msg.toLowerCase().includes("invalid login credentials"))
+      return "Email atau kata sandi salah.";
+    if (code === "email_not_confirmed" || msg.toLowerCase().includes("email not confirmed"))
+      return "Email belum dikonfirmasi. Cek kotak masuk Anda.";
+    if (code === "user_already_exists" || msg.toLowerCase().includes("already") || msg.toLowerCase().includes("exists"))
+      return "Email sudah terdaftar. Silakan masuk.";
+    if (code === "weak_password")
+      return "Kata sandi terlalu lemah. Gunakan minimal 6 karakter.";
+    if (code.includes("rate_limit") || msg.toLowerCase().includes("rate limit"))
+      return "Terlalu banyak percobaan. Coba lagi nanti.";
+
+    return msg || GENERIC_AUTH_ERROR;
   }
-  const message = error.message.toLowerCase();
-  if (message.includes("invalid login credentials")) return "Email atau kata sandi salah.";
-  if (message.includes("email not confirmed")) return "Email belum dikonfirmasi. Cek kotak masuk Anda.";
-  if (message.includes("already registered") || message.includes("already exists")) return "Email sudah terdaftar. Silakan masuk.";
-  if (message.includes("rate limit")) return "Terlalu banyak percobaan. Coba lagi nanti.";
+  if (error instanceof TypeError) return "Gagal terhubung ke server. Periksa koneksi internet Anda.";
+  if (error instanceof Error) return error.message || GENERIC_AUTH_ERROR;
   return GENERIC_AUTH_ERROR;
 }
 
@@ -49,6 +55,7 @@ export default function AuthForm({ mode, nextPath }: AuthFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
   const isLogin = mode === "login";
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -61,6 +68,10 @@ export default function AuthForm({ mode, nextPath }: AuthFormProps) {
       if (isLogin) {
         const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
         if (authError) { setError(mapAuthErrorMessage(authError)); return; }
+        setSuccess(true);
+        toast.success("Berhasil masuk.", {
+          description: "Sesi akun Anda sekarang aktif.",
+        });
         router.replace(nextPath ?? "/");
         router.refresh();
       } else {
@@ -74,6 +85,7 @@ export default function AuthForm({ mode, nextPath }: AuthFormProps) {
         router.refresh();
       }
     } catch (authError) {
+      console.error("[auth] unexpected error:", authError);
       setError(mapAuthErrorMessage(authError));
     } finally {
       setLoading(false);
@@ -136,19 +148,32 @@ export default function AuthForm({ mode, nextPath }: AuthFormProps) {
               aria-label={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
               aria-pressed={showPassword}
               title={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
-              className="absolute right-0.5 top-1/2 flex h-11 w-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-outline transition-colors hover:bg-primary/5 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              className="absolute right-0.5 top-1/2 flex h-11 w-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-outline transition-all duration-150 ease-out hover:bg-primary/5 hover:text-primary active:scale-[0.95] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             >
               {showPassword ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
             </button>
           </div>
         </div>
 
-        {error && <p className="anim-fade-in rounded-lg bg-error-container px-3 py-2 text-xs text-on-error-container" role="alert">{error}</p>}
-        {info && <p className="anim-fade-in rounded-lg bg-tertiary/10 px-3 py-2 text-xs text-tertiary" role="status">{info}</p>}
+        {error && <p className="anim-slide-down rounded-lg bg-error-container px-3 py-2 text-xs text-on-error-container break-all" role="alert">{error}</p>}
+        {info && <p className="anim-slide-down rounded-lg bg-tertiary/10 px-3 py-2 text-xs text-tertiary" role="status">{info}</p>}
 
-        <Button type="submit" className="h-12 w-full rounded-lg font-semibold" disabled={loading}>
-          {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-          {isLogin ? "Masuk" : "Daftar"}
+        <Button
+          type="submit"
+          className="h-12 w-full rounded-lg font-semibold"
+          disabled={loading || success}
+          aria-busy={loading}
+        >
+          {success ? (
+            <CheckCircle2 className="anim-check-in h-4 w-4" aria-hidden="true" />
+          ) : loading ? (
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+          ) : null}
+          {success
+            ? "Berhasil masuk"
+            : loading
+              ? isLogin ? "Sedang masuk..." : "Sedang mendaftar..."
+              : isLogin ? "Masuk" : "Daftar"}
         </Button>
       </form>
 

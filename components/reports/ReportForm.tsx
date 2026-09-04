@@ -23,6 +23,7 @@ import {
   STATUS_META,
 } from "@/lib/constants/reports";
 import { createClient } from "@/lib/supabase/client";
+import { saveOfflineReport } from "@/lib/offline/storage";
 import type { ReportCategory, ReportStatus } from "@/lib/types";
 
 // Default: area Pamulang
@@ -69,8 +70,8 @@ export default function ReportForm() {
   const perceptionShownRef = useRef(false);
   const redirectedRef = useRef(false);
 
-  // Auth-gate di pintu masuk: pengguna anonim melihat kartu login, bukan
-  // form yang berakhir dengan error 401 saat submit.
+  // Auth-gate di pintu masuk: pengguna anonim melihat kartu login saat online.
+  // Jika offline tapi session local masih ada atau user sedang offline, berikan akses isi form.
   useEffect(() => {
     let cancelled = false;
     createClient()
@@ -81,7 +82,14 @@ export default function ReportForm() {
         }
       })
       .catch(() => {
-        if (!cancelled) setAuthGate("anonymous");
+        if (!cancelled) {
+          // Jika gagal karena network offline tapi ada session cached, anggap terautentikasi
+          if (typeof window !== "undefined" && !navigator.onLine) {
+            setAuthGate("authenticated");
+          } else {
+            setAuthGate("anonymous");
+          }
+        }
       });
     return () => {
       cancelled = true;
@@ -319,6 +327,33 @@ export default function ReportForm() {
 
     setSubmitting(true);
 
+    const isOffline = typeof window !== "undefined" && !navigator.onLine;
+
+    // Jika offline: simpan langsung ke antrean IndexedDB
+    if (isOffline) {
+      try {
+        await saveOfflineReport({
+          title: title.trim(),
+          description: description.trim(),
+          category,
+          latitude: coords.lat,
+          longitude: coords.lng,
+          photoBlob: photo || undefined,
+          photoName: photo?.name || undefined,
+        });
+
+        toast.success("Laporan disimpan di perangkat (Offline). Akan otomatis terkirim saat internet kembali.");
+        router.push("/laporan");
+        return;
+      } catch (err) {
+        console.error("Gagal simpan offline:", err);
+        toast.error("Gagal menyimpan laporan offline.");
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
     try {
       const formData = new FormData();
       formData.append("title", title.trim());
@@ -362,7 +397,22 @@ export default function ReportForm() {
         completeRedirect(target);
       }
     } catch {
-      toast.error("Terjadi kesalahan jaringan. Coba lagi.");
+      // Fallback jika fetch gagal karena tiba-tiba koneksi putus di tengah submit
+      try {
+        await saveOfflineReport({
+          title: title.trim(),
+          description: description.trim(),
+          category,
+          latitude: coords.lat,
+          longitude: coords.lng,
+          photoBlob: photo || undefined,
+          photoName: photo?.name || undefined,
+        });
+        toast.info("Koneksi terputus. Laporan diamankan di antrean offline.");
+        router.push("/laporan");
+      } catch {
+        toast.error("Terjadi kesalahan jaringan. Coba lagi.");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -469,7 +519,7 @@ export default function ReportForm() {
     <form onSubmit={handleSubmit} className="space-y-5 pb-32">
       {/* Duplicate detection banner */}
       {checkingDuplicates && candidates.length === 0 && (
-        <div className="anim-fade-in flex items-center gap-2 rounded-xl border border-outline-variant/30 bg-surface-low px-4 py-3">
+        <div className="anim-slide-down flex items-center gap-2 rounded-xl border border-outline-variant/30 bg-surface-low px-4 py-3">
           <Loader2 className="h-4 w-4 animate-spin text-primary" />
           <span className="text-xs font-medium text-on-surface-variant">Memeriksa laporan serupa di sekitar lokasi...</span>
         </div>
@@ -599,7 +649,7 @@ export default function ReportForm() {
                 className={`relative flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 p-3.5 text-center transition-all duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${active ? "border-primary bg-primary/5 shadow-sm" : "border-outline-variant/40 bg-surface-low hover:border-outline-variant hover:bg-surface-container"}`}
               >
                 {active && (
-                  <span className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-white">
+                  <span className="anim-check-in absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-white">
                     <Check className="h-3 w-3" />
                   </span>
                 )}

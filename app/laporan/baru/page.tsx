@@ -1,13 +1,11 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
-import ConnectivityBanner from "@/components/reports/ConnectivityBanner";
 import ReportForm from "@/components/reports/ReportForm";
 
 export default function NewReportPage() {
   return (
     <div className="min-h-screen bg-surface">
-      <ConnectivityBanner />
       <header className="sticky top-0 z-40 flex h-16 items-center border-b border-outline-variant/20 bg-surface/96 px-4 shadow-sm backdrop-blur-md">
         <Link href="/laporan" aria-label="Kembali ke daftar laporan" className="flex h-11 w-11 items-center justify-center rounded-full text-on-surface transition-colors hover:bg-surface-container focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           <ArrowLeft className="h-6 w-6" />
