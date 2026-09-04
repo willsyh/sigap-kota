@@ -23,6 +23,7 @@ import {
   STATUS_META,
 } from "@/lib/constants/reports";
 import { createClient } from "@/lib/supabase/client";
+import { saveOfflineReport } from "@/lib/offline/storage";
 import type { ReportCategory, ReportStatus } from "@/lib/types";
 
 // Default: area Pamulang
@@ -69,8 +70,8 @@ export default function ReportForm() {
   const perceptionShownRef = useRef(false);
   const redirectedRef = useRef(false);
 
-  // Auth-gate di pintu masuk: pengguna anonim melihat kartu login, bukan
-  // form yang berakhir dengan error 401 saat submit.
+  // Auth-gate di pintu masuk: pengguna anonim melihat kartu login saat online.
+  // Jika offline tapi session local masih ada atau user sedang offline, berikan akses isi form.
   useEffect(() => {
     let cancelled = false;
     createClient()
@@ -81,7 +82,14 @@ export default function ReportForm() {
         }
       })
       .catch(() => {
-        if (!cancelled) setAuthGate("anonymous");
+        if (!cancelled) {
+          // Jika gagal karena network offline tapi ada session cached, anggap terautentikasi
+          if (typeof window !== "undefined" && !navigator.onLine) {
+            setAuthGate("authenticated");
+          } else {
+            setAuthGate("anonymous");
+          }
+        }
       });
     return () => {
       cancelled = true;
@@ -319,6 +327,33 @@ export default function ReportForm() {
 
     setSubmitting(true);
 
+    const isOffline = typeof window !== "undefined" && !navigator.onLine;
+
+    // Jika offline: simpan langsung ke antrean IndexedDB
+    if (isOffline) {
+      try {
+        await saveOfflineReport({
+          title: title.trim(),
+          description: description.trim(),
+          category,
+          latitude: coords.lat,
+          longitude: coords.lng,
+          photoBlob: photo || undefined,
+          photoName: photo?.name || undefined,
+        });
+
+        toast.success("Laporan disimpan di perangkat (Offline). Akan otomatis terkirim saat internet kembali.");
+        router.push("/laporan");
+        return;
+      } catch (err) {
+        console.error("Gagal simpan offline:", err);
+        toast.error("Gagal menyimpan laporan offline.");
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
     try {
       const formData = new FormData();
       formData.append("title", title.trim());
@@ -362,7 +397,22 @@ export default function ReportForm() {
         completeRedirect(target);
       }
     } catch {
-      toast.error("Terjadi kesalahan jaringan. Coba lagi.");
+      // Fallback jika fetch gagal karena tiba-tiba koneksi putus di tengah submit
+      try {
+        await saveOfflineReport({
+          title: title.trim(),
+          description: description.trim(),
+          category,
+          latitude: coords.lat,
+          longitude: coords.lng,
+          photoBlob: photo || undefined,
+          photoName: photo?.name || undefined,
+        });
+        toast.info("Koneksi terputus. Laporan diamankan di antrean offline.");
+        router.push("/laporan");
+      } catch {
+        toast.error("Terjadi kesalahan jaringan. Coba lagi.");
+      }
     } finally {
       setSubmitting(false);
     }
