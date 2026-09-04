@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
+import CivicBrandMark from "@/components/CivicBrandMark";
 import ReportForm from "@/components/reports/ReportForm";
 
 export default function NewReportPage() {
@@ -11,6 +12,9 @@ export default function NewReportPage() {
           <ArrowLeft className="h-6 w-6" />
         </Link>
         <h1 className="ml-2 font-heading text-2xl font-bold tracking-tight text-on-surface">Laporkan masalah</h1>
+        <Link href="/" aria-label="Beranda SigapKota" className="ml-auto flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-surface-container focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <CivicBrandMark size="sm" />
+        </Link>
       </header>
       <main className="mx-auto w-full max-w-[600px] px-4 pb-8 pt-6">
         <ReportForm />

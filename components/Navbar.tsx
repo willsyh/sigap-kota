@@ -18,6 +18,7 @@ import {
 import type { User } from "@supabase/supabase-js";
 import { toast } from "sonner";
 
+import CivicBrandMark from "@/components/CivicBrandMark";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -108,8 +109,9 @@ export default function Navbar({ viewMode, onViewModeToggle }: NavbarProps) {
         <div className="flex items-center gap-8">
           <Link
             href="/"
-            className="absolute left-1/2 -translate-x-1/2 font-heading text-xl font-bold tracking-[-0.035em] text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:static md:translate-x-0"
+            className="absolute left-1/2 flex -translate-x-1/2 items-center gap-2 font-heading text-xl font-bold tracking-[-0.035em] text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:static md:translate-x-0"
           >
+            <CivicBrandMark size="sm" />
             SigapKota
           </Link>
 

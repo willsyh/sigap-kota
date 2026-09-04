@@ -17,6 +17,7 @@ import {
   WifiOff,
   Wrench,
 } from "lucide-react";
+import CivicBrandMark from "@/components/CivicBrandMark";
 import Navbar from "@/components/Navbar";
 import { buttonVariants } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
@@ -453,14 +454,17 @@ export default async function HomePage() {
       <footer className="border-t border-outline-variant/30 bg-surface-lowest px-4 py-14">
         <div className="mx-auto max-w-6xl">
           <div className="flex flex-col items-center justify-between gap-6 text-center md:flex-row md:text-left">
-            <div>
-              <span className="font-heading text-lg font-bold text-primary">
-                SigapKota
-              </span>
-              <p className="mt-1 text-xs text-outline">
-                Platform Pemetaan Masalah Fasilitas Umum &amp; Respons Cepat
-                Komunitas.
-              </p>
+            <div className="flex flex-col items-center gap-3 md:flex-row md:items-start md:gap-3">
+              <CivicBrandMark size="sm" className="shrink-0" />
+              <div>
+                <span className="font-heading text-lg font-bold text-primary">
+                  SigapKota
+                </span>
+                <p className="mt-1 text-xs text-outline">
+                  Platform Pemetaan Masalah Fasilitas Umum &amp; Respons Cepat
+                  Komunitas.
+                </p>
+              </div>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-4 text-xs font-semibold text-on-surface-variant">
               <Link href="/peta" className="transition-colors hover:text-primary">
