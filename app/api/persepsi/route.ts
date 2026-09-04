@@ -161,7 +161,7 @@ export async function GET(request: NextRequest) {
 
   let query = supabase
     .from("perceptions")
-    .select("id, latitude, longitude, sentiment, reason, photo_url, report_id, created_at")
+    .select("id, latitude, longitude, sentiment, reason, note, photo_url, report_id, created_at")
     .order("created_at", { ascending: false })
     .limit(2000);
 
