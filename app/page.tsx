@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import {
   ArrowUpRight,
@@ -5,14 +6,16 @@ import {
   CheckCircle2,
   Compass,
   FileCheck2,
+  FileText,
   Flame,
   Layers,
   MapPin,
   Percent,
   ShieldCheck,
-  Sparkles,
   ThumbsUp,
   Vote,
+  WifiOff,
+  Wrench,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { buttonVariants } from "@/components/ui/button";
@@ -71,6 +74,25 @@ function formatNumber(value: number | null | undefined): string {
   return new Intl.NumberFormat("id-ID").format(value);
 }
 
+// Step numerals in the lifecycle mosaic are intentionally below the type ramp
+// (10px micro-labels on 1:1 tiles). The waiver travels with the file.
+function StepNumber({
+  children,
+  className = "",
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <>
+      {/* impeccable-disable-next-line design-system-font-size -- 10px step numerals below type ramp by design */}
+      <span className={`text-[10px] font-bold tabular-nums ${className}`}>
+        {children}
+      </span>
+    </>
+  );
+}
+
 export default async function HomePage() {
   const stats = await getStats();
 
@@ -78,8 +100,8 @@ export default async function HomePage() {
     <div className="min-h-screen bg-surface font-sans text-on-surface antialiased selection:bg-primary/20 selection:text-primary">
       <Navbar />
 
-      {/* Hero: split 12-col grid, left copy + right modular mosaic */}
-      <section className="bg-surface-lowest px-4 pb-20 pt-14 md:pb-28 md:pt-20">
+      {/* Hero: split 12-col grid, left copy + right lifecycle flow */}
+      <section className="bg-surface-lowest px-4 pb-16 pt-14 md:pb-20 md:pt-20">
         <div className="mx-auto max-w-6xl">
           <div className="grid items-center gap-12 lg:grid-cols-12 lg:gap-8">
             {/* Left content */}
@@ -135,44 +157,87 @@ export default async function HomePage() {
                   <MapPin className="h-4 w-4 text-secondary" />
                   <span>Peta real-time</span>
                 </div>
+                <div className="flex items-center gap-2">
+                  <WifiOff className="h-4 w-4 text-secondary" />
+                  <span>Mode offline lapangan</span>
+                </div>
               </div>
             </div>
 
-            {/* Right: modular geometric mosaic (3x3 desktop, 2x2 mobile) */}
+            {/* Right: report lifecycle flow (3x2 desktop, 2-col mobile) */}
             <div className="lg:col-span-5">
               <div className="mx-auto grid w-full max-w-sm grid-cols-2 gap-3 lg:max-w-none lg:grid-cols-3">
+                {/* 01 Laporan masuk */}
                 <div className="flex aspect-square flex-col justify-between rounded-2xl bg-primary p-4 text-primary-foreground">
-                  <MapPin className="h-5 w-5" />
-                  <p className="text-xs font-semibold leading-snug">
-                    Laporan terpetakan
-                  </p>
+                  <StepNumber className="text-primary-foreground/80">01</StepNumber>
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 shrink-0" />
+                    <p className="text-xs font-semibold leading-snug">
+                      Laporan masuk
+                    </p>
+                  </div>
                 </div>
 
-                <div className="civic-map-pattern flex aspect-square items-center justify-center rounded-2xl border border-outline-variant/40">
+                {/* 02 Lokasi presisi */}
+                <div className="civic-map-pattern flex aspect-square flex-col justify-between rounded-2xl border border-outline-variant/40 p-4">
+                  <StepNumber className="text-on-surface-variant">02</StepNumber>
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                      <MapPin className="h-3.5 w-3.5" />
+                    </span>
+                    <p className="text-xs font-semibold leading-snug text-on-surface">
+                      Lokasi presisi
+                    </p>
+                  </div>
+                </div>
+
+                {/* 03 Validasi warga */}
+                <div className="flex aspect-square flex-col justify-between rounded-2xl border border-outline-variant/40 bg-surface-low p-4">
+                  <StepNumber className="text-on-surface-variant">03</StepNumber>
+                  <div className="flex items-center gap-2">
+                    <ThumbsUp className="h-5 w-5 shrink-0 text-primary" />
+                    <p className="text-xs font-semibold leading-snug text-on-surface">
+                      Validasi warga
+                    </p>
+                  </div>
+                </div>
+
+                {/* 04 Respons petugas */}
+                <div className="flex aspect-square flex-col justify-between rounded-2xl border border-outline-variant/40 bg-secondary/10 p-4">
+                  <StepNumber className="text-on-surface-variant">04</StepNumber>
+                  <div className="flex items-center gap-2">
+                    <Wrench className="h-5 w-5 shrink-0 text-secondary" />
+                    <p className="text-xs font-semibold leading-snug text-on-surface">
+                      Respons petugas
+                    </p>
+                  </div>
+                </div>
+
+                {/* 05 Selesai & bukti */}
+                <div className="flex aspect-square flex-col justify-between rounded-2xl bg-tertiary-container p-4 text-on-tertiary-container">
+                  <StepNumber className="text-on-tertiary-container/80">05</StepNumber>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-5 w-5 shrink-0" />
+                    <p className="text-xs font-semibold leading-snug">
+                      Selesai &amp; bukti
+                    </p>
+                  </div>
+                </div>
+
+                {/* Live radar accent */}
+                <div className="civic-map-pattern relative flex aspect-square items-center justify-center overflow-hidden rounded-2xl border border-outline-variant/40">
+                  <span className="absolute h-20 w-20 rounded-full border border-primary/25" />
+                  <span className="absolute h-14 w-14 rounded-full border border-primary/40" />
+                  <span className="absolute h-9 w-9 rounded-full border border-primary/60" />
                   <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
                     <MapPin className="h-4 w-4" />
                   </span>
-                </div>
-
-                <div aria-hidden="true" className="hidden lg:block" />
-                <div aria-hidden="true" className="hidden lg:block" />
-
-                <div className="flex aspect-square flex-col justify-between rounded-2xl border border-outline-variant/40 bg-surface-low p-4">
-                  <ThumbsUp className="h-5 w-5 text-primary" />
-                  <p className="text-xs font-semibold leading-snug text-on-surface">
-                    Dukungan warga
-                  </p>
-                </div>
-
-                <div aria-hidden="true" className="hidden lg:block" />
-                <div aria-hidden="true" className="hidden lg:block" />
-                <div aria-hidden="true" className="hidden lg:block" />
-
-                <div className="flex aspect-square flex-col justify-between rounded-2xl bg-tertiary-container p-4 text-on-tertiary-container">
-                  <CheckCircle2 className="h-5 w-5" />
-                  <p className="text-xs font-semibold leading-snug">
-                    Selesai ditangani
-                  </p>
+                  <span className="absolute right-2 top-2 inline-flex items-center gap-1.5 rounded-full border border-outline-variant/40 bg-surface-lowest px-2 py-0.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-secondary" />
+                    <span className="text-xs font-bold uppercase tracking-wide text-on-surface-variant">
+                      Live
+                    </span>
+                  </span>
                 </div>
               </div>
             </div>
@@ -181,7 +246,7 @@ export default async function HomePage() {
       </section>
 
       {/* Metric strip: live stats with graceful fallback */}
-      <section className="border-y border-outline-variant/30 bg-surface px-4 py-6 md:py-8">
+      <section className="border-y border-outline-variant/30 bg-surface px-4 py-5 md:py-7">
         <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 md:flex-row md:items-center">
           <dl className="grid w-full grid-cols-2 gap-x-6 gap-y-6 sm:grid-cols-4">
             <div className="flex items-center gap-3">
@@ -230,22 +295,30 @@ export default async function HomePage() {
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
                 <Percent className="h-5 w-5" />
               </span>
-              <div>
+              <div className="min-w-0">
                 <dt className="text-xs font-bold uppercase tracking-[0.05em] text-outline">
                   Tingkat Penyelesaian
                 </dt>
-                <dd className="font-heading text-2xl font-bold tabular-nums text-on-surface">
+                <dd className="font-heading text-3xl font-bold tabular-nums text-on-surface">
                   {stats?.completionRate != null
                     ? `${formatNumber(stats.completionRate)}%`
                     : "—"}
                 </dd>
+                {stats?.completionRate != null && (
+                  <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-primary/15">
+                    <div
+                      className="anim-bar-grow h-full rounded-full bg-primary"
+                      style={{ width: `${stats.completionRate}%` }}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </dl>
 
           <Link
             href="/peta"
-            className="inline-flex shrink-0 items-center gap-1.5 font-heading text-sm font-semibold text-primary transition-colors hover:underline"
+            className="mt-4 inline-flex shrink-0 items-center gap-1.5 font-heading text-sm font-semibold text-primary transition-colors hover:underline md:mt-0 md:border-l md:border-outline-variant/30 md:pl-6"
           >
             Eksplorasi Radar Peta
             <ArrowUpRight className="h-4 w-4" />
@@ -277,8 +350,8 @@ export default async function HomePage() {
                 </h3>
                 <p className="text-sm leading-relaxed text-on-surface-variant">
                   Setiap laporan dipasangkan dengan koordinat presisi di peta
-                  interaktif. Dinas terkait melihat lokasi, kategori, dan tingkat
-                  dukungan warga untuk memprioritaskan respons.
+                  interaktif. Dinas dapat melihat lokasi, kategori, dan tingkat
+                  dukungan warga.
                 </p>
               </div>
               <div className="mt-6 border-t border-outline-variant/20 pt-4 text-xs font-semibold text-primary">
@@ -296,9 +369,12 @@ export default async function HomePage() {
                   Validasi Komunitas Terbuka
                 </h3>
                 <p className="text-sm leading-relaxed text-on-surface-variant">
-                  Sistem satu akun satu dukungan menyaring laporan prioritas.
-                  Warga sekitar saling menguatkan urgensi titik masalah tanpa
-                  menduplikasi data aduan.
+                  Satu akun satu dukungan menyaring laporan prioritas. Warga
+                  sekitar menguatkan urgensi titik masalah tanpa duplikasi.
+                </p>
+                <p className="mt-2 text-xs text-outline">
+                  Dibantu verifikasi visual otomatis untuk menekan spam dan
+                  duplikasi.
                 </p>
               </div>
               <div className="mt-6 border-t border-outline-variant/20 pt-4 text-xs font-semibold text-primary">
@@ -316,9 +392,9 @@ export default async function HomePage() {
                   Akuntabilitas Sebelum &amp; Sesudah
                 </h3>
                 <p className="text-sm leading-relaxed text-on-surface-variant">
-                  Petugas memperbarui tahapan penanganan dengan foto bukti sebelum
-                  dan sesudah. Setiap perubahan status tercatat dan dapat diawasi
-                  publik hingga tuntas.
+                  Petugas memperbarui tahapan penanganan dengan foto bukti
+                  sebelum dan sesudah. Setiap perubahan status tercatat dan
+                  diawasi publik.
                 </p>
               </div>
               <div className="mt-6 border-t border-outline-variant/20 pt-4 text-xs font-semibold text-primary">
@@ -334,49 +410,39 @@ export default async function HomePage() {
         <div className="mx-auto max-w-6xl space-y-16">
           <div className="mx-auto max-w-2xl space-y-3 text-center">
             <h2 className="font-heading text-2xl font-bold text-on-surface sm:text-4xl">
-              Kecerdasan Spasial untuk Tata Ruang
+              Dari laporan warga menjadi kecerdasan kota
             </h2>
             <p className="text-sm text-on-surface-variant">
-              Bukan sekadar buku tamu aduan, melainkan sistem analitik
-              terintegrasi untuk perbaikan kota berkelanjutan.
+              Data laporan tidak berhenti setelah masalah ditangani. Setiap titik
+              menjadi lapisan data untuk memahami pola kerusakan dan kebutuhan
+              tata ruang kota.
             </p>
           </div>
 
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="space-y-3 rounded-2xl border border-outline-variant/35 bg-surface-lowest p-6">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary/10 text-secondary">
+          <div className="mx-auto grid gap-6 sm:grid-cols-2 lg:max-w-4xl">
+            <div className="space-y-4 rounded-2xl border border-outline-variant/35 bg-surface-lowest p-7">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-secondary/10 text-secondary">
                 <Flame className="h-5 w-5" />
               </div>
-              <h4 className="font-heading font-bold text-on-surface">Heatmap</h4>
-              <p className="text-xs leading-relaxed text-on-surface-variant">
+              <h4 className="font-heading text-lg font-bold text-on-surface">
+                Heatmap
+              </h4>
+              <p className="text-sm leading-relaxed text-on-surface-variant">
                 Mendeteksi kluster akumulasi kerusakan secara visual, memudahkan
                 dinas terkait mengalokasikan anggaran perbaikan ke area terparah.
               </p>
             </div>
 
-            <div className="space-y-3 rounded-2xl border border-outline-variant/35 bg-surface-lowest p-6">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-tertiary/10 text-tertiary">
+            <div className="space-y-4 rounded-2xl border border-outline-variant/35 bg-surface-lowest p-7">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-tertiary/10 text-tertiary">
                 <Layers className="h-5 w-5" />
               </div>
-              <h4 className="font-heading font-bold text-on-surface">
+              <h4 className="font-heading text-lg font-bold text-on-surface">
                 Lapisan Persepsi
               </h4>
-              <p className="text-xs leading-relaxed text-on-surface-variant">
+              <p className="text-sm leading-relaxed text-on-surface-variant">
                 Merekam rasa aman, tingkat penerangan, dan kenyamanan pejalan kaki
                 di setiap sudut kota untuk audit tata kota yang inklusif.
-              </p>
-            </div>
-
-            <div className="space-y-3 rounded-2xl border border-outline-variant/35 bg-surface-lowest p-6">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <Sparkles className="h-5 w-5" />
-              </div>
-              <h4 className="font-heading font-bold text-on-surface">
-                Verifikasi Vision AI
-              </h4>
-              <p className="text-xs leading-relaxed text-on-surface-variant">
-                Model vision otomatis mencocokkan kesesuaian gambar foto dengan
-                deskripsi teks aduan, memangkas beban moderasi spam admin.
               </p>
             </div>
           </div>
@@ -385,29 +451,46 @@ export default async function HomePage() {
 
       {/* Footer */}
       <footer className="border-t border-outline-variant/30 bg-surface-lowest px-4 py-14">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 text-center md:flex-row md:text-left">
-          <div>
-            <span className="font-heading text-lg font-bold text-primary">
-              SigapKota
-            </span>
-            <p className="mt-1 text-xs text-outline">
-              Platform Pemetaan Masalah Fasilitas Umum &amp; Respons Cepat
-              Komunitas.
-            </p>
+        <div className="mx-auto max-w-6xl">
+          <div className="flex flex-col items-center justify-between gap-6 text-center md:flex-row md:text-left">
+            <div>
+              <span className="font-heading text-lg font-bold text-primary">
+                SigapKota
+              </span>
+              <p className="mt-1 text-xs text-outline">
+                Platform Pemetaan Masalah Fasilitas Umum &amp; Respons Cepat
+                Komunitas.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-4 text-xs font-semibold text-on-surface-variant">
+              <Link href="/peta" className="transition-colors hover:text-primary">
+                Radar Peta
+              </Link>
+              <Link href="/laporan" className="transition-colors hover:text-primary">
+                Daftar Laporan
+              </Link>
+              <Link href="/panduan" className="transition-colors hover:text-primary">
+                Panduan Warga
+              </Link>
+              <Link href="/auth/login" className="transition-colors hover:text-primary">
+                Masuk Akun
+              </Link>
+            </div>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-4 text-xs font-semibold text-on-surface-variant">
-            <Link href="/peta" className="transition-colors hover:text-primary">
-              Radar Peta
-            </Link>
-            <Link href="/laporan" className="transition-colors hover:text-primary">
-              Daftar Laporan
-            </Link>
-            <Link href="/panduan" className="transition-colors hover:text-primary">
-              Panduan Warga
-            </Link>
-            <Link href="/auth/login" className="transition-colors hover:text-primary">
-              Masuk Akun
-            </Link>
+
+          <div className="mt-8 flex flex-col items-center justify-between gap-3 border-t border-outline-variant/20 pt-6 text-xs text-outline md:flex-row">
+            <span>© 2026 SigapKota</span>
+            <div className="flex flex-wrap items-center justify-center gap-4">
+              <Link href="/panduan" className="transition-colors hover:text-primary">
+                Panduan Warga
+              </Link>
+              <Link href="/laporan" className="transition-colors hover:text-primary">
+                Daftar Laporan
+              </Link>
+              <Link href="/peta" className="transition-colors hover:text-primary">
+                Radar Peta
+              </Link>
+            </div>
           </div>
         </div>
       </footer>
